@@ -424,7 +424,7 @@ export const StatistiqueService = {
     const { data, error } = await supabase
       .from('interventions')
       .select('statut')
-      .eq('date_debut', 'gte', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString());
+      .gte('date_debut', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString());
 
     if (error) throw error;
 

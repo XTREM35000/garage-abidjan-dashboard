@@ -27,6 +27,8 @@ import { useBrainSetup } from "@/hooks/useBrainSetup";
 
 const queryClient = new QueryClient();
 
+import GlobalLayout from "./components/GlobalLayout";
+
 const AppContent = () => {
   const {
     isFirstLaunch,
@@ -57,70 +59,81 @@ const AppContent = () => {
         <Route path="/a-propos" element={<APropos />} />
         <Route path="/aide" element={<Aide />} />
 
-        {/* Routes protégées - rediriger vers configuration si pas configuré */}
-        <Route path="/dashboard" element={
-          isConfigured ? (
-            <PrivateRoute><Dashboard /></PrivateRoute>
-          ) : (
-            <Navigate to="/" replace />
-          )
-        } />
-        <Route path="/clients/liste" element={
-          isConfigured ? (
-            <PrivateRoute><ClientsListe /></PrivateRoute>
-          ) : (
-            <Navigate to="/" replace />
-          )
-        } />
-        <Route path="/clients/ajouter" element={
-          isConfigured ? (
-            <PrivateRoute><ClientsAjouter /></PrivateRoute>
-          ) : (
-            <Navigate to="/" replace />
-          )
-        } />
-        <Route path="/clients/historique" element={
-          isConfigured ? (
-            <PrivateRoute><ClientsHistorique /></PrivateRoute>
-          ) : (
-            <Navigate to="/" replace />
-          )
-        } />
-        <Route path="/vehicules" element={
-          isConfigured ? (
-            <PrivateRoute><Vehicules /></PrivateRoute>
-          ) : (
-            <Navigate to="/" replace />
-          )
-        } />
-        <Route path="/reparations" element={
-          isConfigured ? (
-            <PrivateRoute><Reparations /></PrivateRoute>
-          ) : (
-            <Navigate to="/" replace />
-          )
-        } />
-        <Route path="/stock" element={
-          isConfigured ? (
-            <PrivateRoute><Stock /></PrivateRoute>
-          ) : (
-            <Navigate to="/" replace />
-          )
-        } />
-        <Route path="/profil" element={
-          isConfigured ? (
-            <PrivateRoute><Profil /></PrivateRoute>
-          ) : (
-            <Navigate to="/" replace />
-          )
-        } />
-        <Route path="/settings" element={
-          isConfigured ? (
-            <PrivateRoute><Settings /></PrivateRoute>
-          ) : (
-            <Navigate to="/" replace />
-          )
-        } />
+        {/* Routes avec GlobalLayout unifié */}
+        <Route path="/app" element={<GlobalLayout />}>
+          <Route path="dashboard" element={
+            isConfigured ? (
+              <PrivateRoute><Dashboard /></PrivateRoute>
+            ) : (
+              <Navigate to="/" replace />
+            )
+          } />
+          <Route path="clients/liste" element={
+            isConfigured ? (
+              <PrivateRoute><ClientsListe /></PrivateRoute>
+            ) : (
+              <Navigate to="/" replace />
+            )
+          } />
+          <Route path="clients/ajouter" element={
+            isConfigured ? (
+              <PrivateRoute><ClientsAjouter /></PrivateRoute>
+            ) : (
+              <Navigate to="/" replace />
+            )
+          } />
+          <Route path="clients/historique" element={
+            isConfigured ? (
+              <PrivateRoute><ClientsHistorique /></PrivateRoute>
+            ) : (
+              <Navigate to="/" replace />
+            )
+          } />
+          <Route path="vehicules" element={
+            isConfigured ? (
+              <PrivateRoute><Vehicules /></PrivateRoute>
+            ) : (
+              <Navigate to="/" replace />
+            )
+          } />
+          <Route path="reparations" element={
+            isConfigured ? (
+              <PrivateRoute><Reparations /></PrivateRoute>
+            ) : (
+              <Navigate to="/" replace />
+            )
+          } />
+          <Route path="stock" element={
+            isConfigured ? (
+              <PrivateRoute><Stock /></PrivateRoute>
+            ) : (
+              <Navigate to="/" replace />
+            )
+          } />
+          <Route path="profil" element={
+            isConfigured ? (
+              <PrivateRoute><Profil /></PrivateRoute>
+            ) : (
+              <Navigate to="/" replace />
+            )
+          } />
+          <Route path="settings" element={
+            isConfigured ? (
+              <PrivateRoute><Settings /></PrivateRoute>
+            ) : (
+              <Navigate to="/" replace />
+            )
+          } />
+        </Route>
+
+        {/* Redirections pour compatibilité */}
+        <Route path="/dashboard" element={<Navigate to="/app/dashboard" replace />} />
+        <Route path="/clients/*" element={<Navigate to="/app/clients/liste" replace />} />
+        <Route path="/vehicules" element={<Navigate to="/app/vehicules" replace />} />
+        <Route path="/reparations" element={<Navigate to="/app/reparations" replace />} />
+        <Route path="/stock" element={<Navigate to="/app/stock" replace />} />
+        <Route path="/profil" element={<Navigate to="/app/profil" replace />} />
+        <Route path="/settings" element={<Navigate to="/app/settings" replace />} />
 
         {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
         <Route path="*" element={<NotFound />} />
