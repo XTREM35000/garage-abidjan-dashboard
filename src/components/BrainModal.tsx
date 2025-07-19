@@ -96,10 +96,18 @@ const BrainModal: React.FC<BrainModalProps> = ({ isOpen, onComplete }) => {
 
       case 'phone':
         if (!value.trim()) return 'Le téléphone est requis';
-        // Validation plus flexible pour différents pays
+        // Validation plus simple et plus flexible
         const cleanPhone = value.replace(/\s/g, '');
-        const phoneRegex = /^(\+225|\+33|\+226|\+224)[0-9]{8,10}$/;
-        if (!phoneRegex.test(cleanPhone)) {
+        console.log('Phone validation:', {
+          value,
+          cleanValue: cleanPhone,
+          length: cleanPhone.length
+        });
+        // Accepte +XXX suivi de 8 à 12 chiffres
+        const phoneRegex = /^\+[0-9]{1,4}[0-9]{8,12}$/;
+        const matches = phoneRegex.test(cleanPhone);
+        console.log('Phone regex test:', matches);
+        if (!matches) {
           return 'Format téléphone invalide (ex: +225 07 58 96 61 56)';
         }
         return '';
@@ -228,28 +236,27 @@ const BrainModal: React.FC<BrainModalProps> = ({ isOpen, onComplete }) => {
 
     if (step === 1) {
       console.log('Validating step 1 fields...');
-      newErrors.garageName = validateField('garageName', config.garageName);
-      newErrors.ownerName = validateField('ownerName', config.ownerName);
-      newErrors.address = validateField('address', config.address);
-      newErrors.phone = validateField('phone', config.phone);
+      const garageError = validateField('garageName', config.garageName);
+      const ownerError = validateField('ownerName', config.ownerName);
+      const addressError = validateField('address', config.address);
+      const phoneError = validateField('phone', config.phone);
+      
+      if (garageError) newErrors.garageName = garageError;
+      if (ownerError) newErrors.ownerName = ownerError;
+      if (addressError) newErrors.address = addressError;
+      if (phoneError) newErrors.phone = phoneError;
+      
       console.log('Step 1 validation results:', {
-        garageName: newErrors.garageName,
-        ownerName: newErrors.ownerName,
-        address: newErrors.address,
-        phone: newErrors.phone
-      });
-    } else if (step === 2) {
-      console.log('Validating step 2 fields...');
-      newErrors.address = validateField('address', config.address);
-      newErrors.phone = validateField('phone', config.phone);
-      console.log('Step 2 validation results:', {
-        address: newErrors.address,
-        phone: newErrors.phone
+        garageName: garageError,
+        ownerName: ownerError,
+        address: addressError,
+        phone: phoneError
       });
     }
 
     setErrors(newErrors);
-    const isValid = Object.keys(newErrors).length === 0;
+    const hasErrors = Object.values(newErrors).some(error => error !== '');
+    const isValid = !hasErrors;
     console.log('Validation result:', isValid, 'Errors:', newErrors);
     return isValid;
   };
@@ -347,11 +354,12 @@ const BrainModal: React.FC<BrainModalProps> = ({ isOpen, onComplete }) => {
               console.log('🎯 Close button clicked!');
               console.log('Close button target:', e.target);
               e.stopPropagation();
-              // Fermer le modal
+              onComplete(config); // Fermer le modal en appelant onComplete
             }}
             onMouseEnter={() => console.log('🎯 Close button mouse enter')}
             onMouseLeave={() => console.log('🎯 Close button mouse leave')}
             className="absolute top-4 right-4 w-8 h-8 bg-red-500 hover:bg-red-600 rounded-full flex items-center justify-center transition-colors cursor-pointer"
+            style={{ pointerEvents: 'auto' }}
           >
             <X className="w-4 h-4 text-white" />
           </button>
@@ -693,9 +701,14 @@ const BrainModal: React.FC<BrainModalProps> = ({ isOpen, onComplete }) => {
                   onMouseEnter={() => console.log('🎯 HTML Button mouse enter')}
                   onMouseLeave={() => console.log('🎯 HTML Button mouse leave')}
                   disabled={!canProceedToNext()}
-                  className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white h-10 px-4 py-2 cursor-pointer"
+                  className={`inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
+                    !canProceedToNext() 
+                      ? 'opacity-50 cursor-not-allowed bg-gray-400' 
+                      : 'cursor-pointer bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700'
+                  } text-white h-10 px-4 py-2`}
+                  style={{ pointerEvents: 'auto' }}
                 >
-                  Suivant (HTML)
+                  Suivant
                 </button>
               ) : (
                 <Button
