@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { FileUpload } from '@/components/ui/file-upload';
 import {
   Building2,
   Upload,
@@ -21,6 +22,7 @@ import {
   Image as ImageIcon
 } from 'lucide-react';
 import { useBrandCheck } from '@/hooks/useBrandCheck';
+import { FileService } from '@/integrations/supabase/fileService';
 
 interface BrandSetupWizardProps {
   isOpen: boolean;
@@ -35,8 +37,7 @@ const BrandSetupWizard: React.FC<BrandSetupWizardProps> = ({
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState({
     garageName: '',
-    logoFile: null as File | null,
-    logoPreview: '',
+    logoUrl: '',
     address: '',
     phone: '',
     email: '',
@@ -61,7 +62,7 @@ const BrandSetupWizard: React.FC<BrandSetupWizardProps> = ({
       if (!formData.garageName.trim()) {
         newErrors.garageName = 'Le nom du garage est requis';
       }
-      if (!formData.logoFile) {
+      if (!formData.logoUrl) {
         newErrors.logo = 'Le logo est requis';
       }
     }
@@ -104,12 +105,9 @@ const BrandSetupWizard: React.FC<BrandSetupWizardProps> = ({
     setIsLoading(true);
 
     try {
-      // Simuler l'upload du logo
-      const logoUrl = formData.logoPreview || '/placeholder-logo.png';
-
       const result = await saveBrandConfig({
         garageName: formData.garageName,
-        logoUrl,
+        logoUrl: formData.logoUrl,
         address: formData.address,
         phone: formData.phone,
         email: formData.email,
@@ -127,30 +125,22 @@ const BrandSetupWizard: React.FC<BrandSetupWizardProps> = ({
     }
   };
 
-  const handleLogoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      // Validation du fichier
-      if (file.size > 2 * 1024 * 1024) {
-        setErrors({ logo: 'Le fichier doit faire moins de 2MB' });
-        return;
-      }
+  const handleLogoUpload = async (file: File) => {
+    const result = await FileService.uploadGarageLogo(file);
 
-      if (!file.type.match(/image\/(png|jpeg|jpg|svg)/)) {
-        setErrors({ logo: 'Format accepté: PNG, JPG, SVG' });
-        return;
-      }
-
-      setFormData({ ...formData, logoFile: file });
+    if (result.success && result.url) {
+      setFormData({ ...formData, logoUrl: result.url });
       setErrors({ ...errors, logo: '' });
-
-      // Prévisualisation
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        setFormData({ ...formData, logoFile: file, logoPreview: e.target?.result as string });
-      };
-      reader.readAsDataURL(file);
+    } else {
+      setErrors({ ...errors, logo: result.error || 'Erreur lors de l\'upload' });
     }
+
+    return result;
+  };
+
+  const handleLogoRemove = () => {
+    setFormData({ ...formData, logoUrl: '' });
+    setErrors({ ...errors, logo: '' });
   };
 
   const renderStepContent = () => {
@@ -166,203 +156,167 @@ const BrandSetupWizard: React.FC<BrandSetupWizardProps> = ({
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                {/* Upload Logo */}
-                <div className="space-y-2">
-                  <Label>Logo du garage *</Label>
-                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-blue-400 transition-colors">
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={handleLogoUpload}
-                      className="hidden"
-                      id="logo-upload"
-                    />
-                    <label htmlFor="logo-upload" className="cursor-pointer">
-                      {formData.logoPreview ? (
-                        <div className="space-y-2">
-                          <img
-                            src={formData.logoPreview}
-                            alt="Logo preview"
-                            className="w-20 h-20 mx-auto object-contain rounded-lg border"
-                          />
-                          <p className="text-sm text-gray-600">Cliquez pour changer</p>
-                        </div>
-                      ) : (
-                        <div className="space-y-2">
-                          <Upload className="w-12 h-12 mx-auto text-gray-400" />
-                          <p className="text-sm font-medium">Cliquez pour uploader</p>
-                          <p className="text-xs text-gray-500">
-                            PNG, JPG, SVG - Max 2MB
-                          </p>
-                        </div>
-                      )}
-                    </label>
-                  </div>
-                  {errors.logo && (
-                    <p className="text-sm text-red-500">{errors.logo}</p>
-                  )}
-                </div>
-
                 {/* Nom du garage */}
                 <div className="space-y-2">
-                  <Label htmlFor="garageName">Nom officiel du garage *</Label>
+                  <Label htmlFor="garageName">Nom du garage *</Label>
                   <Input
                     id="garageName"
                     value={formData.garageName}
                     onChange={(e) => setFormData({ ...formData, garageName: e.target.value })}
-                    placeholder="Ex: Garage Excellence Abidjan"
+                    placeholder="Ex: Garage Abidjan"
                     className={errors.garageName ? 'border-red-500' : ''}
                   />
                   {errors.garageName && (
                     <p className="text-sm text-red-500">{errors.garageName}</p>
                   )}
                 </div>
+
+                {/* Upload Logo */}
+                <FileUpload
+                  label="Logo du garage"
+                  accept="image/png,image/jpeg,image/jpg,image/svg+xml"
+                  maxSize={2 * 1024 * 1024} // 2MB
+                  onUpload={handleLogoUpload}
+                  onRemove={handleLogoRemove}
+                  currentUrl={formData.logoUrl}
+                  required
+                />
+                {errors.logo && (
+                  <p className="text-sm text-red-500">{errors.logo}</p>
+                )}
               </CardContent>
             </Card>
-
-            {/* Prévisualisation */}
-            {formData.logoPreview && formData.garageName && (
-              <Card className="border-blue-200 bg-blue-50">
-                <CardHeader>
-                  <CardTitle className="text-sm">Prévisualisation du header</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="bg-gradient-to-r from-green-600 to-green-800 p-4 rounded-lg">
-                    <div className="flex items-center space-x-3">
-                      <img
-                        src={formData.logoPreview}
-                        alt="Logo"
-                        className="w-10 h-10 rounded-lg object-contain bg-white/20"
-                      />
-                      <div>
-                        <h2 className="text-white font-bold">{formData.garageName}</h2>
-                        <p className="text-white/80 text-sm">Excellence Automobile</p>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
           </div>
         );
 
       case 2:
         return (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <MapPin className="w-5 h-5 text-green-600" />
-                Informations Légales
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {/* Adresse */}
-              <div className="space-y-2">
-                <Label htmlFor="address">Adresse complète *</Label>
-                <Textarea
-                  id="address"
-                  value={formData.address}
-                  onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                  placeholder="123 Avenue des Champs, Cocody, Abidjan, Côte d'Ivoire"
-                  rows={3}
-                  className={errors.address ? 'border-red-500' : ''}
-                />
-                {errors.address && (
-                  <p className="text-sm text-red-500">{errors.address}</p>
-                )}
-              </div>
-
-              {/* Téléphone */}
-              <div className="space-y-2">
-                <Label htmlFor="phone">Téléphone *</Label>
-                <div className="relative">
-                  <Phone className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                  <Input
-                    id="phone"
-                    value={formData.phone}
-                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                    placeholder="+225 XX XX XX XX XX"
-                    className={`pl-10 ${errors.phone ? 'border-red-500' : ''}`}
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <MapPin className="w-5 h-5 text-green-600" />
+                  Informations Légales
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* Adresse */}
+                <div className="space-y-2">
+                  <Label htmlFor="address">Adresse complète *</Label>
+                  <Textarea
+                    id="address"
+                    value={formData.address}
+                    onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                    placeholder="Ex: 123 Avenue de la Paix, Cocody, Abidjan"
+                    className={errors.address ? 'border-red-500' : ''}
+                    rows={3}
                   />
+                  {errors.address && (
+                    <p className="text-sm text-red-500">{errors.address}</p>
+                  )}
                 </div>
-                {errors.phone && (
-                  <p className="text-sm text-red-500">{errors.phone}</p>
-                )}
-              </div>
 
-              {/* Email */}
-              <div className="space-y-2">
-                <Label htmlFor="email">Email de contact *</Label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                  <Input
-                    id="email"
-                    type="email"
-                    value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    placeholder="contact@garage.com"
-                    className={`pl-10 ${errors.email ? 'border-red-500' : ''}`}
-                  />
+                {/* Téléphone */}
+                <div className="space-y-2">
+                  <Label htmlFor="phone">Téléphone *</Label>
+                  <div className="relative">
+                    <Phone className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
+                    <Input
+                      id="phone"
+                      value={formData.phone}
+                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                      placeholder="+225 0701234567"
+                      className={`pl-10 ${errors.phone ? 'border-red-500' : ''}`}
+                    />
+                  </div>
+                  {errors.phone && (
+                    <p className="text-sm text-red-500">{errors.phone}</p>
+                  )}
                 </div>
-                {errors.email && (
-                  <p className="text-sm text-red-500">{errors.email}</p>
-                )}
-              </div>
-            </CardContent>
-          </Card>
+
+                {/* Email */}
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email *</Label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
+                    <Input
+                      id="email"
+                      type="email"
+                      value={formData.email}
+                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                      placeholder="contact@garage-abidjan.com"
+                      className={`pl-10 ${errors.email ? 'border-red-500' : ''}`}
+                    />
+                  </div>
+                  {errors.email && (
+                    <p className="text-sm text-red-500">{errors.email}</p>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         );
 
       case 3:
         return (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Globe className="w-5 h-5 text-purple-600" />
-                Paramètres par Défaut
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {/* Devise */}
-              <div className="space-y-2">
-                <Label htmlFor="currency">Devise</Label>
-                <div className="relative">
-                  <select
-                    id="currency"
-                    value={formData.currency}
-                    onChange={(e) => setFormData({ ...formData, currency: e.target.value })}
-                    className="w-full p-2 border rounded-md"
-                    disabled
-                  >
-                    <option value="XOF">Franc CFA (XOF) - Verrouillé</option>
-                  </select>
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Globe className="w-5 h-5 text-purple-600" />
+                  Paramètres
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* Devise */}
+                <div className="space-y-2">
+                  <Label>Devise</Label>
+                  <div className="flex gap-2">
+                    {['XOF', 'EUR', 'USD'].map((currency) => (
+                      <Button
+                        key={currency}
+                        type="button"
+                        variant={formData.currency === currency ? 'default' : 'outline'}
+                        onClick={() => setFormData({ ...formData, currency })}
+                        className="flex-1"
+                      >
+                        {currency}
+                      </Button>
+                    ))}
+                  </div>
                 </div>
-                <p className="text-xs text-gray-500">
-                  La devise est verrouillée en FCFA pour la Côte d'Ivoire
-                </p>
-              </div>
 
-              {/* Langue */}
-              <div className="space-y-2">
-                <Label htmlFor="language">Langue d'interface</Label>
-                <select
-                  id="language"
-                  value={formData.language}
-                  onChange={(e) => setFormData({ ...formData, language: e.target.value })}
-                  className="w-full p-2 border rounded-md"
-                >
-                  <option value="FR">Français</option>
-                  <option value="EN">English</option>
-                </select>
-              </div>
+                {/* Langue */}
+                <div className="space-y-2">
+                  <Label>Langue</Label>
+                  <div className="flex gap-2">
+                    {[
+                      { code: 'FR', name: 'Français' },
+                      { code: 'EN', name: 'English' }
+                    ].map((lang) => (
+                      <Button
+                        key={lang.code}
+                        type="button"
+                        variant={formData.language === lang.code ? 'default' : 'outline'}
+                        onClick={() => setFormData({ ...formData, language: lang.code })}
+                        className="flex-1"
+                      >
+                        {lang.name}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
 
-              <Alert>
-                <CheckCircle className="h-4 w-4" />
-                <AlertDescription>
-                  Ces paramètres peuvent être modifiés ultérieurement dans les paramètres du système.
-                </AlertDescription>
-              </Alert>
-            </CardContent>
-          </Card>
+                {/* Résumé */}
+                <Alert>
+                  <CheckCircle className="w-4 h-4" />
+                  <AlertDescription>
+                    Configuration terminée ! Votre garage sera configuré avec ces paramètres.
+                  </AlertDescription>
+                </Alert>
+              </CardContent>
+            </Card>
+          </div>
         );
 
       default:
@@ -374,31 +328,38 @@ const BrandSetupWizard: React.FC<BrandSetupWizardProps> = ({
     <Dialog open={isOpen} onOpenChange={() => {}}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Building2 className="w-6 h-6 text-blue-600" />
+          <DialogTitle className="text-2xl font-bold text-center">
             Configuration du Garage
           </DialogTitle>
         </DialogHeader>
 
-        {/* Barre de progression */}
+        {/* Progress Bar */}
         <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <span className="text-sm font-medium">
-              Étape {currentStep} sur {steps.length}
-            </span>
-            <Badge variant="secondary">
-              {Math.round(progress)}% complété
-            </Badge>
-          </div>
           <Progress value={progress} className="w-full" />
-
-          <div className="flex items-center justify-between text-sm text-gray-600">
-            <span>{steps[currentStep - 1].title}</span>
-            <span>{steps[currentStep - 1].description}</span>
+          <div className="flex justify-between text-sm text-gray-600">
+            {steps.map((step) => (
+              <div
+                key={step.id}
+                className={`flex flex-col items-center ${
+                  step.id <= currentStep ? 'text-blue-600' : 'text-gray-400'
+                }`}
+              >
+                <div
+                  className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium ${
+                    step.id <= currentStep
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-200 text-gray-600'
+                  }`}
+                >
+                  {step.id < currentStep ? <CheckCircle className="w-4 h-4" /> : step.id}
+                </div>
+                <span className="mt-1 text-xs">{step.title}</span>
+              </div>
+            ))}
           </div>
         </div>
 
-        {/* Contenu de l'étape */}
+        {/* Step Content */}
         <div className="py-6">
           {renderStepContent()}
         </div>
@@ -409,30 +370,35 @@ const BrandSetupWizard: React.FC<BrandSetupWizardProps> = ({
             variant="outline"
             onClick={handlePrevious}
             disabled={currentStep === 1}
+            className="flex items-center gap-2"
           >
-            <ArrowLeft className="w-4 h-4 mr-2" />
+            <ArrowLeft className="w-4 h-4" />
             Précédent
           </Button>
 
           <Button
             onClick={handleNext}
             disabled={isLoading}
+            className="flex items-center gap-2"
           >
             {currentStep === steps.length ? (
               <>
                 {isLoading ? (
-                  'Configuration...'
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    Configuration...
+                  </>
                 ) : (
                   <>
-                    <CheckCircle className="w-4 h-4 mr-2" />
-                    Terminer la configuration
+                    <CheckCircle className="w-4 h-4" />
+                    Terminer
                   </>
                 )}
               </>
             ) : (
               <>
                 Suivant
-                <ArrowRight className="w-4 h-4 ml-2" />
+                <ArrowRight className="w-4 h-4" />
               </>
             )}
           </Button>
