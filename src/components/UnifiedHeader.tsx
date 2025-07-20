@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Car, Wrench, Zap, Sun, Moon } from 'lucide-react';
+import { Car, Wrench, Zap, Sun, Moon, Bell } from 'lucide-react';
 import { useTheme } from '@/contexts/ThemeContext';
 import UserMenu from './UserMenu';
+import NotificationCenter from './NotificationCenter';
 import { Link } from 'react-router-dom';
 import {
   NavigationMenu,
@@ -16,6 +17,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Badge } from '@/components/ui/badge';
 
 interface UnifiedHeaderProps {
   showUserMenu?: boolean;
@@ -28,6 +30,8 @@ const UnifiedHeader: React.FC<UnifiedHeaderProps> = ({
 }) => {
   const { isDark, toggleTheme } = useTheme();
   const [garageData, setGarageData] = useState<any>({});
+  const [isNotificationOpen, setIsNotificationOpen] = useState(false);
+  const [unreadNotifications, setUnreadNotifications] = useState(0);
 
   useEffect(() => {
     const stored = localStorage.getItem('garageData');
@@ -35,6 +39,16 @@ const UnifiedHeader: React.FC<UnifiedHeaderProps> = ({
       setGarageData(JSON.parse(stored));
     }
   }, []);
+
+  // Charger le nombre de notifications non lues
+  useEffect(() => {
+    const savedNotifications = localStorage.getItem('notifications');
+    if (savedNotifications) {
+      const notifications = JSON.parse(savedNotifications);
+      const unreadCount = notifications.filter((n: any) => !n.read).length;
+      setUnreadNotifications(unreadCount);
+    }
+  }, [isNotificationOpen]); // Recharger quand le modal se ferme
 
   return (
     <header className={`w-full shadow-2xl animate-fade-in sticky top-0 z-40 transition-colors duration-500 ${
@@ -151,6 +165,25 @@ const UnifiedHeader: React.FC<UnifiedHeaderProps> = ({
 
           {/* Contrôles */}
           <div className="flex items-center space-x-4">
+            {/* Bouton notifications */}
+            <div className="relative">
+              <button
+                onClick={() => setIsNotificationOpen(true)}
+                className={`p-2 rounded-lg transition-colors duration-300 relative ${
+                  isDark
+                    ? 'bg-gray-700 text-white hover:bg-gray-600'
+                    : 'bg-white/25 text-white hover:bg-white/35 shadow-lg'
+                }`}
+              >
+                <Bell className="w-5 h-5" />
+                {unreadNotifications > 0 && (
+                  <Badge className="absolute -top-2 -right-2 bg-red-500 text-white text-xs px-1.5 py-0.5 min-w-[18px] h-[18px] flex items-center justify-center">
+                    {unreadNotifications > 99 ? '99+' : unreadNotifications}
+                  </Badge>
+                )}
+              </button>
+            </div>
+
             {/* Toggle de thème */}
             {showThemeToggle && (
               <button
@@ -170,6 +203,12 @@ const UnifiedHeader: React.FC<UnifiedHeaderProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Centre de notifications */}
+      <NotificationCenter
+        isOpen={isNotificationOpen}
+        onClose={() => setIsNotificationOpen(false)}
+      />
     </header>
   );
 };
