@@ -309,7 +309,7 @@ const RepairForm: React.FC<RepairFormProps> = ({
                     <div>
                       <strong>📸 Documentation Requise</strong>
                       <p className="text-sm mt-1">
-                        Cette réparation nécessite des preuves photo (durée >24h, type sensible, véhicule >5M FCFA).
+                        Cette réparation nécessite des preuves photo (durée supérieure à 24h, type sensible, véhicule supérieur à 5M FCFA).
                       </p>
                     </div>
                     <div className="flex items-center gap-2">

@@ -1,5 +1,5 @@
 import React from 'react';
-import { getGarageInfoForDocuments } from '@/lib/config';
+// import { getGarageInfoForDocuments } from '@/lib/config';
 
 interface GarageInfoProps {
   showLogo?: boolean;
@@ -16,7 +16,16 @@ const GarageInfo: React.FC<GarageInfoProps> = ({
   showLegal = false,
   className = ''
 }) => {
-  const garageInfo = getGarageInfoForDocuments();
+  const garageInfo = {
+    name: 'Garage Central Abidjan',
+    address: 'Plateau, Abidjan',
+    phone: '+225 07 58 96 61 56',
+    email: 'contact@garage-central.ci',
+    logo: null,
+    rccm: null,
+    taxRegime: null,
+    taxId: null
+  };
 
   return (
     <div className={`garage-info ${className}`}>

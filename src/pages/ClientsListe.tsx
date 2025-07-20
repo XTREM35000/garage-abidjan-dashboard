@@ -253,7 +253,7 @@ const ClientsListe: React.FC = () => {
       notes: client.notes || ''
     };
 
-    setSelectedClient({ ...client, formData });
+    setSelectedClient(client);
     setIsModalOpen(true);
   };
 
@@ -557,7 +557,19 @@ const ClientsListe: React.FC = () => {
         onClose={closeModal}
         onSubmit={selectedClient ? handleUpdateClient : handleAddClient}
         isLoading={isLoading}
-        initialData={selectedClient?.formData}
+        initialData={selectedClient ? {
+          nom: selectedClient.name.split(' ')[0] || '',
+          prenom: selectedClient.name.split(' ').slice(1).join(' ') || '',
+          telephone: selectedClient.phone,
+          email: selectedClient.email,
+          adresse: selectedClient.adresse,
+          dateNaissance: selectedClient.dateNaissance || '',
+          numeroPermis: selectedClient.numeroPermis || '',
+          statut: selectedClient.statut === 'Nouveau' ? 'nouveau' :
+                  selectedClient.statut === 'Actif' ? 'actif' :
+                  selectedClient.statut === 'VIP' ? 'vip' : 'inactif',
+          notes: selectedClient.notes || ''
+        } : undefined}
       />
 
       {/* Modal pour afficher les détails */}
