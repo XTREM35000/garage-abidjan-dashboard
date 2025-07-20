@@ -14,16 +14,18 @@ import {
   Clock,
   Star,
   Users,
-  Award
+  Award,
+  Sun,
+  Moon
 } from 'lucide-react';
 import { useTheme } from '@/contexts/ThemeContext';
-import UnifiedHeader from '@/components/UnifiedHeader';
+
 import UnifiedFooter from '@/components/UnifiedFooter';
 
 const Index = () => {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [showDevisModal, setShowDevisModal] = useState(false);
-  const { isDark } = useTheme();
+  const { isDark, toggleTheme } = useTheme();
 
   // Carrousel data avec vraies images de réparation auto
   const carouselItems = [
@@ -60,8 +62,33 @@ const Index = () => {
 
   return (
     <div className={`min-h-screen transition-colors duration-500 ${isDark ? 'bg-gray-900' : 'bg-gradient-to-br from-gray-50 to-gray-100'}`}>
-      {/* Header unifié */}
-      <UnifiedHeader showUserMenu={false} showThemeToggle={true} />
+      {/* Header simple pour la page d'accueil */}
+      <header className="w-full bg-gradient-to-r from-green-500 via-green-600 to-green-700 shadow-2xl py-4 px-8">
+        <div className="max-w-7xl mx-auto flex items-center justify-between">
+          <div className="flex items-center space-x-4">
+            <div className="w-12 h-12 bg-white/20 backdrop-blur-md rounded-xl flex items-center justify-center shadow-lg border border-white/30">
+              <Car className="w-7 h-7 text-white" />
+            </div>
+            <div>
+              <h1 className="text-xl font-bold text-white">Garage Abidjan</h1>
+              <p className="text-sm text-white/80">Excellence Automobile</p>
+            </div>
+          </div>
+          <div className="flex items-center space-x-4">
+            <button
+              onClick={toggleTheme}
+              className="p-2 rounded-lg bg-white/20 text-white hover:bg-white/30 transition-colors"
+            >
+              {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+            </button>
+            <Link to="/auth">
+              <Button className="bg-white text-black hover:bg-gray-100 font-bold shadow-lg">
+                Espace Pro
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </header>
 
       {/* Hero Section avec Carrousel */}
       <section className="relative h-[600px] overflow-hidden">
@@ -96,7 +123,7 @@ const Index = () => {
                       <div className="flex space-x-4">
                         <Button
                           size="lg"
-                          className="bg-white text-gray-900 hover:bg-gray-100 shadow-lg"
+                          className="bg-white text-black hover:bg-gray-100 shadow-lg font-bold"
                           onClick={() => setShowDevisModal(true)}
                         >
                           <Calculator className="mr-2 w-5 h-5" />
@@ -105,8 +132,7 @@ const Index = () => {
                         <Link to="/auth">
                           <Button
                             size="lg"
-                            variant="outline"
-                            className="border-white text-white hover:bg-white hover:text-gray-900 shadow-lg"
+                            className="bg-white text-black hover:bg-gray-100 shadow-lg font-bold"
                           >
                             Espace Pro
                             <ArrowRight className="ml-2 w-4 h-4" />
@@ -293,7 +319,7 @@ const Index = () => {
                     </div>
                   </div>
                   <Link to="/auth" className="block">
-                    <Button size="lg" className="w-full bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700">
+                    <Button size="lg" className="w-full bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 font-bold text-white">
                       Commencer Maintenant
                       <ArrowRight className="ml-2 w-4 h-4" />
                     </Button>
@@ -324,7 +350,7 @@ const Index = () => {
                 Fermer
               </Button>
               <Link to="/auth">
-                <Button className="bg-green-600 hover:bg-green-700">
+                <Button className="bg-green-600 hover:bg-green-700 font-bold text-white shadow-lg">
                   Espace Pro
                 </Button>
               </Link>

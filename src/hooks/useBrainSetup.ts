@@ -70,13 +70,14 @@ export const useBrainSetup = () => {
 
     localStorage.setItem('garageData', JSON.stringify(garageData));
 
-    // Créer l'utilisateur admin par défaut
+    // Créer l'utilisateur admin par défaut pour la démo
     const userData = {
-      name: config.ownerName,
-      email: config.email || 'admin@garage.com',
+      name: config.ownerName || 'Thierry Gogo',
+      email: config.email || 'thierry@garage-abidjan.com',
       role: 'Propriétaire',
       avatar: null,
-      isAdmin: true,
+      isAdmin: true, // Admin par défaut pour la démo
+      permissions: ['all'], // Toutes les permissions
       createdAt: new Date().toISOString()
     };
 

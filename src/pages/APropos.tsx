@@ -1,9 +1,9 @@
 import React from 'react';
-import MainLayout from '@/components/MainLayout';
+import UnifiedLayout from '@/layout/UnifiedLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 const APropos: React.FC = () => (
-  <MainLayout>
+  <UnifiedLayout>
     <div className="py-8 w-full max-w-2xl mx-auto">
       <Card className="shadow-soft animate-fade-in">
         <CardHeader>
@@ -15,7 +15,7 @@ const APropos: React.FC = () => (
         </CardContent>
       </Card>
     </div>
-  </MainLayout>
-);
+      </UnifiedLayout>
+  );
 
 export default APropos;

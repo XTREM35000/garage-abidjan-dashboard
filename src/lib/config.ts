@@ -1,94 +1,193 @@
-// Configuration de l'application basée sur les variables d'environnement
-export const appConfig = {
-  // Configuration Supabase
-  supabase: {
-    url: import.meta.env.VITE_SUPABASE_URL || 'https://your-project.supabase.co',
-    anonKey: import.meta.env.VITE_SUPABASE_ANON_KEY || 'public-anon-key',
+// Configuration centrale pour le garage
+export const GARAGE_CONFIG = {
+  // Informations du garage
+  name: 'Garage Excellence Abidjan',
+  owner: 'Thierry Gogo',
+  address: 'Cocody, Abidjan, Côte d\'Ivoire',
+  phone: '+225 07 58 96 61 56',
+  email: 'contact@garage-abidjan.com',
+
+  // Configuration monétaire
+  currency: {
+    code: 'XOF',
+    symbol: 'FCFA',
+    name: 'Franc CFA',
+    locale: 'fr-FR',
+    exchangeRate: 1, // Taux de change par rapport à l'euro (1 XOF = 0.00152 EUR)
   },
 
-  // Configuration du Garage (valeurs par défaut)
-  garage: {
-    name: import.meta.env.VITE_GARAGE_NAME || 'Garage Excellence Abidjan',
-    owner: import.meta.env.VITE_GARAGE_OWNER || 'Thierry Gogo',
-    address: import.meta.env.VITE_GARAGE_ADDRESS || '123 Avenue des Champs, Cocody, Abidjan',
-    phone: import.meta.env.VITE_GARAGE_PHONE || '+225 07 58 96 61 56',
-    email: import.meta.env.VITE_GARAGE_EMAIL || 'contact@garage-abidjan.com',
-    rccm: import.meta.env.VITE_GARAGE_RCCM || 'CI-ABJ-2024-B-12345',
-    taxRegime: (import.meta.env.VITE_GARAGE_TAX_REGIME as 'reel' | 'simplifie') || 'reel',
-    taxId: import.meta.env.VITE_GARAGE_TAX_ID || '123456789',
-    cni: import.meta.env.VITE_GARAGE_CNI || '1234567890123456',
+  // Paramètres régionaux
+  region: {
+    country: 'Côte d\'Ivoire',
+    city: 'Abidjan',
+    timezone: 'Africa/Abidjan',
+    language: 'fr',
   },
 
-  // Configuration Stripe (ne pas afficher dans l'interface)
-  stripe: {
-    publishableKey: import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || '',
-    secretKey: import.meta.env.VITE_STRIPE_SECRET_KEY || '',
-    webhookSecret: import.meta.env.VITE_STRIPE_WEBHOOK_SECRET || '',
+  // Configuration des prix par défaut
+  defaultPrices: {
+    // Services de base
+    vidange: 45000,
+    revision: 75000,
+    diagnostic: 25000,
+    reparationFreinage: 125000,
+    reparationMoteur: 180000,
+    climatisation: 95000,
+
+    // Pièces courantes
+    filtreHuile: 2500,
+    filtreAir: 1800,
+    plaquettesFrein: 8500,
+    disquesFrein: 15000,
+    batterie: 45000,
+    huileMoteur: 3500,
+    bougies: 1200,
+    liquideRefroidissement: 1200,
+    courroieDistribution: 25000,
   },
 
-  // Configuration de l'application
-  app: {
-    version: import.meta.env.VITE_APP_VERSION || '1.0.0',
-    environment: import.meta.env.VITE_APP_ENVIRONMENT || 'development',
-    defaultTheme: import.meta.env.VITE_DEFAULT_THEME || 'light',
-    garageImages: import.meta.env.VITE_GARAGE_IMAGES === 'true',
+  // Seuils d'alerte pour le stock
+  stockThresholds: {
+    filtreHuile: 5,
+    plaquettesFrein: 3,
+    batterie: 2,
+    huileMoteur: 8,
+    bougies: 6,
+    disquesFrein: 4,
+    filtreAir: 4,
+    liquideRefroidissement: 10,
+    courroieDistribution: 2,
   },
+
+  // Fournisseurs principaux
+  suppliers: [
+    'Total Côte d\'Ivoire',
+    'Brembo Distribution',
+    'Exide Technologies',
+    'NGK Spark Plugs',
+    'Mann Filter',
+    'Gates Corporation',
+  ],
+
+  // Catégories de véhicules courants en Côte d'Ivoire
+  vehicleCategories: [
+    'Toyota',
+    'Peugeot',
+    'Renault',
+    'Hyundai',
+    'Dacia',
+    'Suzuki',
+    'Nissan',
+    'Mitsubishi',
+  ],
+
+  // Modèles de véhicules populaires
+  popularVehicles: [
+    'Toyota Corolla',
+    'Toyota Hilux',
+    'Peugeot 206',
+    'Peugeot 208',
+    'Renault Logan',
+    'Renault Clio',
+    'Hyundai i10',
+    'Dacia Sandero',
+    'Suzuki Swift',
+  ],
+
+  // Services proposés
+  services: [
+    'Vidange et filtres',
+    'Révision complète',
+    'Diagnostic moteur',
+    'Réparation freinage',
+    'Réparation moteur',
+    'Réparation climatisation',
+    'Remplacement embrayage',
+    'Réparation électrique',
+    'Réparation suspension',
+    'Réparation transmission',
+  ],
+
+  // Statuts des réparations
+  repairStatuses: [
+    { value: 'en_attente', label: 'En attente', color: 'yellow' },
+    { value: 'en_cours', label: 'En cours', color: 'blue' },
+    { value: 'termine', label: 'Terminé', color: 'green' },
+    { value: 'annule', label: 'Annulé', color: 'red' },
+  ],
+
+  // Statuts des clients
+  clientStatuses: [
+    { value: 'nouveau', label: 'Nouveau', color: 'blue' },
+    { value: 'actif', label: 'Actif', color: 'green' },
+    { value: 'vip', label: 'VIP', color: 'purple' },
+    { value: 'inactif', label: 'Inactif', color: 'gray' },
+  ],
 };
 
-// Fonction pour obtenir la configuration du garage depuis localStorage ou les valeurs par défaut
-export const getGarageConfig = () => {
-  const storedConfig = localStorage.getItem('garageConfig');
-  if (storedConfig) {
-    try {
-      return JSON.parse(storedConfig);
-    } catch (error) {
-      console.error('Erreur lors du parsing de la configuration:', error);
-    }
-  }
+// Interface pour la configuration du garage
+export interface GarageConfig {
+  garageName: string;
+  ownerName: string;
+  logo: string | null;
+  address: string;
+  phone: string;
+  email?: string;
+  rccm?: string;
+  taxRegime?: 'reel' | 'simplifie';
+  taxId?: string;
+  cni?: string;
+}
 
-  // Retourner les valeurs par défaut si aucune configuration n'est stockée
-  return {
-    garageName: appConfig.garage.name,
-    ownerName: appConfig.garage.owner,
-    logo: null,
-    address: appConfig.garage.address,
-    phone: appConfig.garage.phone,
-    email: appConfig.garage.email,
-    rccm: appConfig.garage.rccm,
-    taxRegime: appConfig.garage.taxRegime,
-    taxId: appConfig.garage.taxId,
-    cni: appConfig.garage.cni,
-  };
+// Fonction pour vérifier si la configuration est complète
+export const isConfigurationComplete = (): boolean => {
+  const garageConfig = localStorage.getItem('garageConfig');
+  const brainCompleted = localStorage.getItem('brainCompleted');
+
+  return !!(garageConfig && brainCompleted === 'true');
+};
+
+// Fonction pour obtenir la configuration du garage
+export const getGarageConfig = (): GarageConfig | null => {
+  const config = localStorage.getItem('garageConfig');
+  return config ? JSON.parse(config) : null;
 };
 
 // Fonction pour sauvegarder la configuration du garage
-export const saveGarageConfig = (config: any) => {
+export const saveGarageConfig = (config: GarageConfig): void => {
   localStorage.setItem('garageConfig', JSON.stringify(config));
   localStorage.setItem('brainCompleted', 'true');
 };
 
-// Fonction pour vérifier si la configuration est complète
-export const isConfigurationComplete = () => {
-  const brainCompleted = localStorage.getItem('brainCompleted') === 'true';
-  const garageConfig = localStorage.getItem('garageConfig');
-  const garageData = localStorage.getItem('garageData');
-  const userData = localStorage.getItem('user');
-
-  return Boolean(brainCompleted && garageConfig && garageData && userData);
+// Fonction pour formater les prix en FCFA
+export const formatPrice = (amount: number, currency: string = 'XOF'): string => {
+  if (currency === 'XOF') {
+    return `${amount.toLocaleString('fr-FR')} FCFA`;
+  }
+  return `${amount.toLocaleString('fr-FR')} ${currency}`;
 };
 
-// Fonction pour obtenir les informations du garage pour les factures/devis
-export const getGarageInfoForDocuments = () => {
-  const config = getGarageConfig();
-  return {
-    name: config.garageName,
-    owner: config.ownerName,
-    address: config.address,
-    phone: config.phone,
-    email: config.email,
-    logo: config.logo,
-    rccm: config.rccm,
-    taxRegime: config.taxRegime,
-    taxId: config.taxId,
+// Fonction pour convertir les prix
+export const convertPrice = (amount: number, fromCurrency: string, toCurrency: string): number => {
+  const rates = {
+    XOF: 1,
+    EUR: 0.00152,
+    USD: 0.00167,
   };
+
+  const amountInXOF = amount / rates[fromCurrency as keyof typeof rates];
+  return amountInXOF * rates[toCurrency as keyof typeof rates];
 };
+
+// Fonction pour obtenir les informations de devise
+export const getCurrencyInfo = (currencyCode: string) => {
+  const currencies = {
+    XOF: { symbol: 'FCFA', name: 'Franc CFA', locale: 'fr-FR' },
+    EUR: { symbol: '€', name: 'Euro', locale: 'fr-FR' },
+    USD: { symbol: '$', name: 'Dollar US', locale: 'en-US' },
+  };
+
+  return currencies[currencyCode as keyof typeof currencies] || currencies.XOF;
+};
+
+export default GARAGE_CONFIG;

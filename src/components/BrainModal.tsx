@@ -240,12 +240,12 @@ const BrainModal: React.FC<BrainModalProps> = ({ isOpen, onComplete }) => {
       const ownerError = validateField('ownerName', config.ownerName);
       const addressError = validateField('address', config.address);
       const phoneError = validateField('phone', config.phone);
-      
+
       if (garageError) newErrors.garageName = garageError;
       if (ownerError) newErrors.ownerName = ownerError;
       if (addressError) newErrors.address = addressError;
       if (phoneError) newErrors.phone = phoneError;
-      
+
       console.log('Step 1 validation results:', {
         garageName: garageError,
         ownerName: ownerError,
@@ -312,14 +312,8 @@ const BrainModal: React.FC<BrainModalProps> = ({ isOpen, onComplete }) => {
       return canProceed;
     } else if (step === 2) {
       const canProceed = config.address.trim() && config.phone.trim();
-      console.log('Step 2 validation:', {
-        address: config.address.trim(),
-        phone: config.phone.trim(),
-        canProceed
-      });
       return canProceed;
     }
-    console.log('Step 3 or 4, can proceed: true');
     return true;
   };
 
@@ -327,37 +321,24 @@ const BrainModal: React.FC<BrainModalProps> = ({ isOpen, onComplete }) => {
     <div
       className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
       onClick={(e) => {
-        console.log('🎯 Modal backdrop clicked!');
-        console.log('Target:', e.target);
-        console.log('Current target:', e.currentTarget);
         if (e.target === e.currentTarget) {
-          console.log('Clicked on backdrop, not modal content');
+          // Backdrop clicked, do nothing for now
         }
       }}
-      onMouseEnter={() => console.log('🎯 Modal backdrop mouse enter')}
-      onMouseLeave={() => console.log('🎯 Modal backdrop mouse leave')}
     >
       <Card
         className={`w-full max-w-2xl max-h-[90vh] overflow-y-auto ${isDark ? 'bg-gray-800 border-gray-700' : ''}`}
         onClick={(e) => {
-          console.log('🎯 Card clicked!');
-          console.log('Card target:', e.target);
           e.stopPropagation();
         }}
-        onMouseEnter={() => console.log('🎯 Card mouse enter')}
-        onMouseLeave={() => console.log('🎯 Card mouse leave')}
       >
         <CardHeader className="text-center border-b relative">
           {/* Bouton de fermeture */}
           <button
             onClick={(e) => {
-              console.log('🎯 Close button clicked!');
-              console.log('Close button target:', e.target);
               e.stopPropagation();
               onComplete(config); // Fermer le modal en appelant onComplete
             }}
-            onMouseEnter={() => console.log('🎯 Close button mouse enter')}
-            onMouseLeave={() => console.log('🎯 Close button mouse leave')}
             className="absolute top-4 right-4 w-8 h-8 bg-red-500 hover:bg-red-600 rounded-full flex items-center justify-center transition-colors cursor-pointer"
             style={{ pointerEvents: 'auto' }}
           >
@@ -399,33 +380,10 @@ const BrainModal: React.FC<BrainModalProps> = ({ isOpen, onComplete }) => {
         <CardContent
           className="p-6"
           onClick={(e) => {
-            console.log('🎯 CardContent clicked!');
-            console.log('CardContent target:', e.target);
             e.stopPropagation();
           }}
-          onMouseEnter={() => console.log('🎯 CardContent mouse enter')}
-          onMouseLeave={() => console.log('🎯 CardContent mouse leave')}
         >
-          {/* Debug Info */}
-          {process.env.NODE_ENV === 'development' && (
-            <div className="mb-4 p-2 bg-gray-100 rounded text-xs">
-              <p><strong>Debug:</strong> Step: {step}, Can proceed: {canProceedToNext() ? 'true' : 'false'}</p>
-              <p>Garage: "{config.garageName}", Owner: "{config.ownerName}"</p>
-              <p>Address: "{config.address}", Phone: "{config.phone}"</p>
-                            <button
-                onClick={(e) => {
-                  console.log('🎯 Test button clicked!');
-                  console.log('Test button target:', e.target);
-                  e.stopPropagation();
-                }}
-                onMouseEnter={() => console.log('🎯 Test button mouse enter')}
-                onMouseLeave={() => console.log('🎯 Test button mouse leave')}
-                className="mt-2 px-2 py-1 bg-blue-500 text-white rounded text-xs cursor-pointer"
-              >
-                Test Click
-              </button>
-            </div>
-          )}
+
 
           {/* Étape 1: Toutes les informations */}
           {step === 1 && (
@@ -702,8 +660,8 @@ const BrainModal: React.FC<BrainModalProps> = ({ isOpen, onComplete }) => {
                   onMouseLeave={() => console.log('🎯 HTML Button mouse leave')}
                   disabled={!canProceedToNext()}
                   className={`inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
-                    !canProceedToNext() 
-                      ? 'opacity-50 cursor-not-allowed bg-gray-400' 
+                    !canProceedToNext()
+                      ? 'opacity-50 cursor-not-allowed bg-gray-400'
                       : 'cursor-pointer bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700'
                   } text-white h-10 px-4 py-2`}
                   style={{ pointerEvents: 'auto' }}

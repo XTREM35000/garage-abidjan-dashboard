@@ -75,7 +75,7 @@ const Dashboard: React.FC = () => {
               <CardTitle className={isDark ? 'text-white' : ''}>Chiffre d'affaires</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-2xl font-bold text-yellow-500">12 500 €</p>
+              <p className="text-2xl font-bold text-yellow-500">8 250 000 FCFA</p>
               <p className={`${isDark ? 'text-gray-300' : 'text-gray-600'}`}>Ce mois</p>
             </CardContent>
           </Card>

@@ -1,9 +1,9 @@
 import React from 'react';
-import MainLayout from '@/components/MainLayout';
+import UnifiedLayout from '@/layout/UnifiedLayout';
 import { Button } from '@/components/ui/button';
 
 const Connexion: React.FC = () => (
-  <MainLayout>
+  <UnifiedLayout>
     <div className="py-8 w-full max-w-md mx-auto">
       <div className="bg-card rounded-xl p-6 shadow-soft animate-fade-in">
         <h1 className="text-2xl font-bold mb-4">Connexion</h1>
@@ -20,7 +20,7 @@ const Connexion: React.FC = () => (
         </form>
       </div>
     </div>
-  </MainLayout>
-);
+      </UnifiedLayout>
+  );
 
 export default Connexion;

@@ -1,5 +1,5 @@
 import React from 'react';
-import MainLayout from '@/components/MainLayout';
+import UnifiedLayout from '@/layout/UnifiedLayout';
 
 const historique = [
   { id: 1, client: 'Jean Dupont', action: 'Ajouté', date: '2024-05-01' },
@@ -8,7 +8,7 @@ const historique = [
 ];
 
 const ClientsHistorique: React.FC = () => (
-  <MainLayout>
+  <UnifiedLayout>
     <div className="py-8 w-full max-w-2xl mx-auto">
       <h1 className="text-3xl font-bold mb-6">Historique des clients</h1>
       <ul className="bg-card rounded-xl shadow-soft divide-y animate-fade-in">
@@ -20,7 +20,7 @@ const ClientsHistorique: React.FC = () => (
         ))}
       </ul>
     </div>
-  </MainLayout>
-);
+      </UnifiedLayout>
+  );
 
 export default ClientsHistorique;

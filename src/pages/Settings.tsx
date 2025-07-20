@@ -18,7 +18,8 @@ import {
   Database,
   AlertTriangle,
   Save,
-  RefreshCw
+  RefreshCw,
+  Camera
 } from 'lucide-react';
 import { useTheme } from '@/contexts/ThemeContext';
 import AdvancedSettings from '@/components/AdvancedSettings';
@@ -43,7 +44,7 @@ const Settings: React.FC = () => {
     display: {
       theme: isDark ? 'dark' : 'light',
       language: 'fr',
-      currency: 'EUR'
+      currency: 'XOF'
     },
     security: {
       twoFactor: false,
@@ -312,14 +313,78 @@ const Settings: React.FC = () => {
                     </Label>
                     <select
                       id="currency"
-                      defaultValue="EUR"
+                      defaultValue="XOF"
                       className={`w-full p-2 rounded-md border ${isDark ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'}`}
                     >
+                      <option value="XOF">XOF (FCFA)</option>
                       <option value="EUR">EUR (€)</option>
                       <option value="USD">USD ($)</option>
-                      <option value="XOF">XOF (CFA)</option>
                     </select>
                   </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Preuves Photo */}
+            <Card className={isDark ? 'bg-gray-800 border-gray-700' : ''}>
+              <CardHeader>
+                <CardTitle className={`flex items-center space-x-2 ${isDark ? 'text-white' : ''}`}>
+                  <Camera className="w-5 h-5" />
+                  <span>Preuves Photo</span>
+                </CardTitle>
+                <CardDescription className={isDark ? 'text-gray-300' : ''}>
+                  Configuration de la documentation photo obligatoire
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label className={isDark ? 'text-gray-300' : ''}>Activer les preuves photo</Label>
+                    <p className="text-sm text-gray-500">Documentation obligatoire pour certaines réparations</p>
+                  </div>
+                  <Switch
+                    checked={true}
+                    onCheckedChange={() => {}}
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="minPhotos" className={isDark ? 'text-gray-300' : ''}>
+                      Nombre minimum de photos
+                    </Label>
+                    <Input
+                      id="minPhotos"
+                      type="number"
+                      min="1"
+                      max="5"
+                      defaultValue="2"
+                      className={isDark ? 'bg-gray-700 border-gray-600' : ''}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="maxFileSize" className={isDark ? 'text-gray-300' : ''}>
+                      Taille max. par photo (MB)
+                    </Label>
+                    <Input
+                      id="maxFileSize"
+                      type="number"
+                      min="1"
+                      max="10"
+                      defaultValue="5"
+                      className={isDark ? 'bg-gray-700 border-gray-600' : ''}
+                    />
+                  </div>
+                </div>
+
+                <div className="bg-blue-50 p-4 rounded-lg">
+                  <h4 className="font-semibold text-blue-800 mb-2">📸 Conditions d'activation</h4>
+                  <ul className="text-sm text-blue-700 space-y-1">
+                    <li>• Durée de réparation {'>'} 24 heures</li>
+                    <li>• Type : Carrosserie ou Moteur</li>
+                    <li>• Valeur du véhicule {'>'} 5M FCFA</li>
+                    <li>• Client non blacklisté</li>
+                  </ul>
                 </div>
               </CardContent>
             </Card>

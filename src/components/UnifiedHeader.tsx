@@ -1,7 +1,21 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Car, Wrench, Zap, Sun, Moon } from 'lucide-react';
 import { useTheme } from '@/contexts/ThemeContext';
 import UserMenu from './UserMenu';
+import { Link } from 'react-router-dom';
+import {
+  NavigationMenu,
+  NavigationMenuItem,
+  NavigationMenuLink,
+  NavigationMenuList,
+  navigationMenuTriggerStyle,
+} from "@/components/ui/navigation-menu";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface UnifiedHeaderProps {
   showUserMenu?: boolean;
@@ -13,92 +27,148 @@ const UnifiedHeader: React.FC<UnifiedHeaderProps> = ({
   showThemeToggle = true
 }) => {
   const { isDark, toggleTheme } = useTheme();
+  const [garageData, setGarageData] = useState<any>({});
 
-  // Récupérer les données du garage
-  const garageData = typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('garageData') || '{}') : {};
+  useEffect(() => {
+    const stored = localStorage.getItem('garageData');
+    if (stored) {
+      setGarageData(JSON.parse(stored));
+    }
+  }, []);
 
   return (
-    <header className={`w-full shadow-lg py-4 px-8 flex items-center justify-between animate-fade-in sticky top-0 z-40 transition-colors duration-500 ${
+    <header className={`w-full shadow-2xl animate-fade-in sticky top-0 z-40 transition-colors duration-500 ${
       isDark
         ? 'bg-gradient-to-r from-gray-800 via-gray-900 to-gray-800'
-        : 'bg-gradient-to-r from-orange-500 via-red-500 to-orange-600'
+        : 'bg-gradient-to-r from-green-600 via-green-700 to-green-800'
     }`}>
-      <div className="flex items-center space-x-4">
-        {/* Logo animé */}
-        <div className="relative">
-          <div className={`w-12 h-12 rounded-xl flex items-center justify-center shadow-lg border transition-colors duration-500 ${
-            isDark
-              ? 'bg-white/10 backdrop-blur-sm border-white/20'
-              : 'bg-white/20 backdrop-blur-sm border-white/30'
-          }`}>
-            <div className="relative">
-              <Car className={`w-7 h-7 animate-pulse ${isDark ? 'text-white' : 'text-white'}`} />
-              <div className="absolute -top-1 -right-1">
-                <Wrench className={`w-4 h-4 animate-bounce ${isDark ? 'text-yellow-300' : 'text-yellow-300'}`} />
+      {/* Fond animé subtil */}
+      <div className="absolute inset-0 opacity-10">
+        <div className="absolute top-10 left-10 w-20 h-20 bg-white/10 rounded-full animate-ping" />
+        <div className="absolute top-32 right-16 w-16 h-16 bg-white/5 rounded-full animate-pulse" />
+        <div className="absolute bottom-8 left-1/3 w-12 h-12 bg-white/8 rounded-full animate-bounce" />
+      </div>
+
+      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+        <div className="flex items-center justify-between">
+          {/* Logo et informations garage */}
+          <div className="flex items-center space-x-6">
+            {/* Logo animé */}
+            <div className="relative group">
+              <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shadow-xl border transition-all duration-500 hover:scale-110 hover:rotate-3 ${
+                isDark
+                  ? 'bg-white/10 backdrop-blur-md border-white/20'
+                  : 'bg-white/25 backdrop-blur-md border-white/40'
+              }`}>
+                <div className="relative">
+                  <Car className="w-8 h-8 text-white animate-pulse" />
+                  <div className="absolute -top-1 -right-1">
+                    <Wrench className="w-5 h-5 text-yellow-300 animate-bounce" />
+                  </div>
+                </div>
+              </div>
+              <div className="absolute -bottom-2 -right-2">
+                <Zap className="w-4 h-4 text-yellow-400 animate-ping" />
+              </div>
+            </div>
+
+            {/* Informations du garage */}
+            <div className="flex flex-col space-y-1">
+              <h1 className="text-2xl font-bold tracking-tight text-white drop-shadow-lg transition-all duration-300 hover:scale-105">
+                {garageData.name || 'Garage Abidjan'}
+              </h1>
+              <div className="flex items-center space-x-2">
+                <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse shadow-lg shadow-green-400/50" />
+                <span className="text-sm text-white/90 font-medium">
+                  Excellence Automobile
+                </span>
               </div>
             </div>
           </div>
-          <div className="absolute -bottom-1 -right-1">
-            <Zap className={`w-3 h-3 animate-ping ${isDark ? 'text-yellow-400' : 'text-yellow-400'}`} />
+
+          {/* Navigation centrale */}
+          <div className="hidden lg:flex items-center space-x-6">
+            <NavigationMenu>
+              <NavigationMenuList className="flex gap-4">
+                <NavigationMenuItem>
+                  <Link to="/">
+                    <NavigationMenuLink className={`${navigationMenuTriggerStyle()} ${isDark ? 'text-white hover:text-green-300' : 'text-black font-bold hover:text-green-700'} transition-colors`}>
+                      Accueil
+                    </NavigationMenuLink>
+                  </Link>
+                </NavigationMenuItem>
+                <NavigationMenuItem>
+                  <Link to="/dashboard">
+                    <NavigationMenuLink className={`${navigationMenuTriggerStyle()} ${isDark ? 'text-white hover:text-green-300' : 'text-black font-bold hover:text-green-700'} transition-colors`}>
+                      Tableau de bord
+                    </NavigationMenuLink>
+                  </Link>
+                </NavigationMenuItem>
+                <NavigationMenuItem>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <NavigationMenuLink className={`${navigationMenuTriggerStyle()} ${isDark ? 'text-white hover:text-green-300' : 'text-black font-bold hover:text-green-700'} transition-colors`}>
+                        Clients
+                      </NavigationMenuLink>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start">
+                      <Link to="/clients/liste">
+                        <DropdownMenuItem>Liste des clients</DropdownMenuItem>
+                      </Link>
+                      <Link to="/clients/ajouter">
+                        <DropdownMenuItem>Ajouter un client</DropdownMenuItem>
+                      </Link>
+                      <Link to="/clients/historique">
+                        <DropdownMenuItem>Historique</DropdownMenuItem>
+                      </Link>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </NavigationMenuItem>
+                <NavigationMenuItem>
+                  <Link to="/vehicules">
+                    <NavigationMenuLink className={`${navigationMenuTriggerStyle()} ${isDark ? 'text-white hover:text-green-300' : 'text-black font-bold hover:text-green-700'} transition-colors`}>
+                      Véhicules
+                    </NavigationMenuLink>
+                  </Link>
+                </NavigationMenuItem>
+                <NavigationMenuItem>
+                  <Link to="/reparations">
+                    <NavigationMenuLink className={`${navigationMenuTriggerStyle()} ${isDark ? 'text-white hover:text-green-300' : 'text-black font-bold hover:text-green-700'} transition-colors`}>
+                      Réparations
+                    </NavigationMenuLink>
+                  </Link>
+                </NavigationMenuItem>
+                <NavigationMenuItem>
+                  <Link to="/stock">
+                    <NavigationMenuLink className={`${navigationMenuTriggerStyle()} ${isDark ? 'text-white hover:text-green-300' : 'text-black font-bold hover:text-green-700'} transition-colors`}>
+                      Stock
+                    </NavigationMenuLink>
+                  </Link>
+                </NavigationMenuItem>
+              </NavigationMenuList>
+            </NavigationMenu>
+          </div>
+
+          {/* Contrôles */}
+          <div className="flex items-center space-x-4">
+            {/* Toggle de thème */}
+            {showThemeToggle && (
+              <button
+                onClick={toggleTheme}
+                className={`p-2 rounded-lg transition-colors duration-300 ${
+                  isDark
+                    ? 'bg-gray-700 text-yellow-400 hover:bg-gray-600'
+                    : 'bg-white/25 text-white hover:bg-white/35 shadow-lg'
+                }`}
+              >
+                {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+              </button>
+            )}
+
+            {/* Menu utilisateur */}
+            {showUserMenu && <UserMenu />}
           </div>
         </div>
-
-        {/* Titre et sous-titre */}
-        <div className="flex flex-col">
-          <h1 className="text-2xl font-bold tracking-tight text-white drop-shadow-lg">
-            {garageData.name ? garageData.name : 'Garage Abidjan'}
-          </h1>
-          <div className="flex items-center space-x-2">
-            <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-            <p className="text-sm text-white/90 font-medium">
-              Excellence Automobile
-            </p>
-            <span className="text-xs text-white/70">•</span>
-            <p className="text-xs text-white/70">
-              Depuis 2010
-            </p>
-          </div>
-        </div>
-      </div>
-
-      <div className="flex items-center space-x-4">
-        {/* Indicateurs de statut (cachés sur mobile) */}
-        <div className="hidden md:flex items-center space-x-4">
-          <div className={`flex items-center space-x-2 rounded-lg px-3 py-1 border transition-colors duration-500 ${
-            isDark
-              ? 'bg-white/10 backdrop-blur-sm border-white/20'
-              : 'bg-white/10 backdrop-blur-sm border-white/20'
-          }`}>
-            <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-            <span className="text-xs text-white font-medium">Système Opérationnel</span>
-          </div>
-
-          <div className={`flex items-center space-x-2 rounded-lg px-3 py-1 border transition-colors duration-500 ${
-            isDark
-              ? 'bg-white/10 backdrop-blur-sm border-white/20'
-              : 'bg-white/10 backdrop-blur-sm border-white/20'
-          }`}>
-            <div className="w-2 h-2 bg-blue-400 rounded-full" />
-            <span className="text-xs text-white font-medium">3 Interventions en cours</span>
-          </div>
-        </div>
-
-        {/* Toggle de thème */}
-        {showThemeToggle && (
-          <button
-            onClick={toggleTheme}
-            className={`p-2 rounded-lg transition-colors duration-300 ${
-              isDark
-                ? 'bg-gray-700 text-yellow-400 hover:bg-gray-600'
-                : 'bg-white/20 text-white hover:bg-white/30'
-            }`}
-          >
-            {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
-          </button>
-        )}
-
-        {/* Menu utilisateur */}
-        {showUserMenu && <UserMenu />}
       </div>
     </header>
   );

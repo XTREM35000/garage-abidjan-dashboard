@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { useState, useEffect } from "react";
+import SplashScreen from "@/components/SplashScreen";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import Dashboard from "./pages/Dashboard";
@@ -12,6 +13,7 @@ import ClientsAjouter from "./pages/ClientsAjouter";
 import ClientsHistorique from "./pages/ClientsHistorique";
 import Vehicules from "./pages/Vehicules";
 import Reparations from "./pages/Reparations";
+import ThirdPartyDemo from "./pages/ThirdPartyDemo";
 import Stock from "./pages/Stock";
 import APropos from "./pages/APropos";
 import Aide from "./pages/Aide";
@@ -24,10 +26,11 @@ import AuthRedirect from "./routes/AuthRedirect";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import BrainModal from "@/components/BrainModal";
 import { useBrainSetup } from "@/hooks/useBrainSetup";
+import { useBrandCheck } from "@/hooks/useBrandCheck";
+import AdminOnboardingModal from "@/components/AdminOnboardingModal";
+import BrandSetupWizard from "@/components/BrandSetupWizard";
 
 const queryClient = new QueryClient();
-
-import GlobalLayout from "./components/GlobalLayout";
 
 const AppContent = () => {
   const {
@@ -36,6 +39,47 @@ const AppContent = () => {
     showBrainModal,
     handleBrainComplete
   } = useBrainSetup();
+
+  const {
+    isBrandConfigured,
+    isAdminExists,
+    isFirstLaunch: isBrandFirstLaunch,
+    isLoading: isBrandLoading,
+    saveAdminUser,
+    saveBrandConfig
+  } = useBrandCheck();
+
+  const [showAdminOnboarding, setShowAdminOnboarding] = useState(false);
+  const [showBrandSetup, setShowBrandSetup] = useState(false);
+  const [currentAdmin, setCurrentAdmin] = useState<any>(null);
+
+  useEffect(() => {
+    // Si c'est le premier lancement et qu'aucun admin n'existe
+    if (isBrandFirstLaunch && !isAdminExists && !isBrandLoading) {
+      setShowAdminOnboarding(true);
+    }
+    // Si un admin existe mais que le brand n'est pas configuré
+    else if (isAdminExists && !isBrandConfigured && !isBrandLoading) {
+      setShowBrandSetup(true);
+    }
+  }, [isBrandFirstLaunch, isAdminExists, isBrandConfigured, isBrandLoading]);
+
+  const handleAdminComplete = (adminData: any) => {
+    setCurrentAdmin(adminData);
+    setShowAdminOnboarding(false);
+    setShowBrandSetup(true);
+  };
+
+  const handleBrandComplete = (brandData: any) => {
+    setShowBrandSetup(false);
+    // Rediriger vers le dashboard
+    window.location.href = '/dashboard';
+  };
+
+  // Afficher le splash screen pendant le chargement
+  if (isBrandLoading) {
+    return <div className="flex items-center justify-center min-h-screen">Chargement...</div>;
+  }
 
   return (
     <BrowserRouter>
@@ -59,103 +103,120 @@ const AppContent = () => {
         <Route path="/a-propos" element={<APropos />} />
         <Route path="/aide" element={<Aide />} />
 
-        {/* Routes avec GlobalLayout unifié */}
-        <Route path="/app" element={<GlobalLayout />}>
-          <Route path="dashboard" element={
-            isConfigured ? (
-              <PrivateRoute><Dashboard /></PrivateRoute>
-            ) : (
-              <Navigate to="/" replace />
-            )
-          } />
-          <Route path="clients/liste" element={
-            isConfigured ? (
-              <PrivateRoute><ClientsListe /></PrivateRoute>
-            ) : (
-              <Navigate to="/" replace />
-            )
-          } />
-          <Route path="clients/ajouter" element={
-            isConfigured ? (
-              <PrivateRoute><ClientsAjouter /></PrivateRoute>
-            ) : (
-              <Navigate to="/" replace />
-            )
-          } />
-          <Route path="clients/historique" element={
-            isConfigured ? (
-              <PrivateRoute><ClientsHistorique /></PrivateRoute>
-            ) : (
-              <Navigate to="/" replace />
-            )
-          } />
-          <Route path="vehicules" element={
-            isConfigured ? (
-              <PrivateRoute><Vehicules /></PrivateRoute>
-            ) : (
-              <Navigate to="/" replace />
-            )
-          } />
-          <Route path="reparations" element={
-            isConfigured ? (
-              <PrivateRoute><Reparations /></PrivateRoute>
-            ) : (
-              <Navigate to="/" replace />
-            )
-          } />
-          <Route path="stock" element={
-            isConfigured ? (
-              <PrivateRoute><Stock /></PrivateRoute>
-            ) : (
-              <Navigate to="/" replace />
-            )
-          } />
-          <Route path="profil" element={
-            isConfigured ? (
-              <PrivateRoute><Profil /></PrivateRoute>
-            ) : (
-              <Navigate to="/" replace />
-            )
-          } />
-          <Route path="settings" element={
-            isConfigured ? (
-              <PrivateRoute><Settings /></PrivateRoute>
-            ) : (
-              <Navigate to="/" replace />
-            )
-          } />
-        </Route>
-
-        {/* Redirections pour compatibilité */}
-        <Route path="/dashboard" element={<Navigate to="/app/dashboard" replace />} />
-        <Route path="/clients/*" element={<Navigate to="/app/clients/liste" replace />} />
-        <Route path="/vehicules" element={<Navigate to="/app/vehicules" replace />} />
-        <Route path="/reparations" element={<Navigate to="/app/reparations" replace />} />
-        <Route path="/stock" element={<Navigate to="/app/stock" replace />} />
-        <Route path="/profil" element={<Navigate to="/app/profil" replace />} />
-        <Route path="/settings" element={<Navigate to="/app/settings" replace />} />
+        {/* Routes protégées - vérification brand configuré */}
+        <Route path="/dashboard" element={
+          isBrandConfigured ? (
+            <PrivateRoute><Dashboard /></PrivateRoute>
+          ) : (
+            <Navigate to="/" replace />
+          )
+        } />
+        <Route path="/clients/liste" element={
+          isBrandConfigured ? (
+            <PrivateRoute><ClientsListe /></PrivateRoute>
+          ) : (
+            <Navigate to="/" replace />
+          )
+        } />
+        <Route path="/clients/ajouter" element={
+          isBrandConfigured ? (
+            <PrivateRoute><ClientsAjouter /></PrivateRoute>
+          ) : (
+            <Navigate to="/" replace />
+          )
+        } />
+        <Route path="/clients/historique" element={
+          isBrandConfigured ? (
+            <PrivateRoute><ClientsHistorique /></PrivateRoute>
+          ) : (
+            <Navigate to="/" replace />
+          )
+        } />
+        <Route path="/vehicules" element={
+          isBrandConfigured ? (
+            <PrivateRoute><Vehicules /></PrivateRoute>
+          ) : (
+            <Navigate to="/" replace />
+          )
+        } />
+        <Route path="/reparations" element={
+          isBrandConfigured ? (
+            <PrivateRoute><Reparations /></PrivateRoute>
+          ) : (
+            <Navigate to="/" replace />
+          )
+        } />
+        <Route path="/third-party-demo" element={
+          isBrandConfigured ? (
+            <PrivateRoute><ThirdPartyDemo /></PrivateRoute>
+          ) : (
+            <Navigate to="/" replace />
+          )
+        } />
+        <Route path="/stock" element={
+          isBrandConfigured ? (
+            <PrivateRoute><Stock /></PrivateRoute>
+          ) : (
+            <Navigate to="/" replace />
+          )
+        } />
+        <Route path="/profil" element={
+          isBrandConfigured ? (
+            <PrivateRoute><Profil /></PrivateRoute>
+          ) : (
+            <Navigate to="/" replace />
+          )
+        } />
+        <Route path="/settings" element={
+          isBrandConfigured ? (
+            <PrivateRoute><Settings /></PrivateRoute>
+          ) : (
+            <Navigate to="/" replace />
+          )
+        } />
 
         {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
         <Route path="*" element={<NotFound />} />
       </Routes>
 
-      {/* Modal de configuration initiale */}
+      {/* Modal de configuration initiale (ancien système) */}
       <BrainModal
         isOpen={showBrainModal}
         onComplete={handleBrainComplete}
+      />
+
+      {/* Nouveau système d'onboarding */}
+      <AdminOnboardingModal
+        isOpen={showAdminOnboarding}
+        onComplete={handleAdminComplete}
+      />
+
+      <BrandSetupWizard
+        isOpen={showBrandSetup}
+        onComplete={handleBrandComplete}
       />
     </BrowserRouter>
   );
 };
 
 const App = () => {
+  const [showSplash, setShowSplash] = useState(true);
+
+  const handleSplashComplete = () => {
+    setShowSplash(false);
+  };
+
   return (
     <ThemeProvider>
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
           <Toaster />
           <Sonner />
-          <AppContent />
+          {showSplash ? (
+            <SplashScreen onComplete={handleSplashComplete} />
+          ) : (
+            <AppContent />
+          )}
         </TooltipProvider>
       </QueryClientProvider>
     </ThemeProvider>
