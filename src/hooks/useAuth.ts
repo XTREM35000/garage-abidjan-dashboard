@@ -21,7 +21,7 @@ export const useAuth = () => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
       if (session?.user) {
-        fetchProfile(session.user.id);
+        fetchProfile(session.user.email!);
       } else {
         setIsLoading(false);
       }
@@ -33,7 +33,7 @@ export const useAuth = () => {
         setUser(session?.user ?? null);
         
         if (session?.user) {
-          await fetchProfile(session.user.id);
+          await fetchProfile(session.user.email!);
         } else {
           setProfile(null);
           setIsLoading(false);
@@ -44,18 +44,23 @@ export const useAuth = () => {
     return () => subscription.unsubscribe();
   }, []);
 
-  const fetchProfile = async (userId: string) => {
+  const fetchProfile = async (userEmail: string) => {
     try {
       const { data, error } = await supabase
         .from('users')
         .select('id, email, nom, prenom, role, organisation_id')
-        .eq('id', userId)
+        .eq('email', userEmail)
         .single();
 
-      if (error) throw error;
-      setProfile(data);
+      if (error) {
+        console.warn('User profile not found in database:', error);
+        setProfile(null);
+      } else {
+        setProfile(data);
+      }
     } catch (error) {
       console.error('Error fetching profile:', error);
+      setProfile(null);
     } finally {
       setIsLoading(false);
     }
@@ -65,6 +70,8 @@ export const useAuth = () => {
     await supabase.auth.signOut();
     setUser(null);
     setProfile(null);
+    // Nettoyer le localStorage
+    localStorage.removeItem('selectedOrganisationSlug');
   };
 
   return {
