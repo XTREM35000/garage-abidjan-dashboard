@@ -24,6 +24,8 @@ import Settings from "./pages/Settings";
 import PrivateRoute from "./routes/PrivateRoute";
 import AuthRedirect from "./routes/AuthRedirect";
 import { ThemeProvider } from "@/contexts/ThemeContext";
+import { OrganisationProvider, useOrganisation } from "@/components/OrganisationProvider";
+import { OrganisationOnboarding } from "@/components/OrganisationOnboarding";
 import BrainModal from "@/components/BrainModal";
 import { useBrainSetup } from "@/hooks/useBrainSetup";
 import { useBrandCheck } from "@/hooks/useBrandCheck";
@@ -33,6 +35,14 @@ import BrandSetupWizard from "@/components/BrandSetupWizard";
 const queryClient = new QueryClient();
 
 const AppContent = () => {
+  return (
+    <OrganisationProvider>
+      <AppContentWithOrg />
+    </OrganisationProvider>
+  );
+};
+
+const AppContentWithOrg = () => {
   const {
     isFirstLaunch,
     isConfigured,
@@ -195,7 +205,20 @@ const AppContent = () => {
         isOpen={showBrandSetup}
         onComplete={handleBrandComplete}
       />
+
+      <OrganisationOnboardingWrapper />
     </BrowserRouter>
+  );
+};
+
+const OrganisationOnboardingWrapper = () => {
+  const { needsOnboarding, completeOnboarding } = useOrganisation();
+
+  return (
+    <OrganisationOnboarding
+      isOpen={needsOnboarding}
+      onComplete={completeOnboarding}
+    />
   );
 };
 

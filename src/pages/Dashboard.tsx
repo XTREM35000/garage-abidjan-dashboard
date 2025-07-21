@@ -3,13 +3,20 @@ import UnifiedLayout from '@/layout/UnifiedLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { BarChart3, Users, Car, Wrench, TrendingUp } from 'lucide-react';
 import { useTheme } from '@/contexts/ThemeContext';
+import { OrganisationDashboard } from '@/components/OrganisationDashboard';
+import { useOrganisation } from '@/components/OrganisationProvider';
 
 const Dashboard: React.FC = () => {
   const { isDark } = useTheme();
+  const { currentOrg } = useOrganisation();
 
   return (
     <UnifiedLayout>
       <div className="py-8 w-full">
+        {/* Organisation Dashboard */}
+        <OrganisationDashboard />
+        
+        {/* Existing content */}
         <img
           src="https://images.unsplash.com/photo-1563720223185-11003d516935?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80"
           alt="Garage automobile"
