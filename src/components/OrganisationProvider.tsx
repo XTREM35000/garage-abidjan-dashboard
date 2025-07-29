@@ -44,27 +44,42 @@ export const OrganisationProvider: React.FC<Props> = ({ children }) => {
 
   const fetchOrganisations = async () => {
     try {
+      console.log('[OrganisationProvider] Chargement des organisations...');
+
       // Si l'utilisateur a une organisation_id, charger seulement celle-ci
       if (profile?.organisation_id) {
+        console.log('[OrganisationProvider] Utilisateur avec organisation_id:', profile.organisation_id);
+
         const { data, error } = await supabase
           .from('organisations')
           .select('id, nom, slug, logo_url, plan_abonnement, est_actif')
           .eq('id', profile.organisation_id)
           .single();
 
-        if (error) throw error;
-        
+        if (error) {
+          console.error('[OrganisationProvider] Erreur lors du chargement de l\'organisation:', error);
+          throw error;
+        }
+
         if (data) {
+          console.log('[OrganisationProvider] Organisation chargée:', data.nom);
           setOrganisations([data]);
           setCurrentOrg(data);
           localStorage.setItem('currentOrgId', data.id);
-          
+
           // Définir le contexte Supabase
-          await supabase.functions.invoke('set-organisation-context', {
-            body: { organisationId: data.id }
-          });
+          try {
+            await supabase.functions.invoke('set-organisation-context', {
+              body: { organisationId: data.id }
+            });
+            console.log('[OrganisationProvider] Contexte organisationnel défini');
+          } catch (contextError) {
+            console.warn('[OrganisationProvider] Erreur lors de la définition du contexte:', contextError);
+          }
         }
       } else if (profile?.role === 'superadmin') {
+        console.log('[OrganisationProvider] Superadmin - chargement de toutes les organisations');
+
         // Les superadmin peuvent voir toutes les organisations
         const { data, error } = await supabase
           .from('organisations')
@@ -72,44 +87,55 @@ export const OrganisationProvider: React.FC<Props> = ({ children }) => {
           .eq('est_actif', true)
           .order('nom');
 
-        if (error) throw error;
-        setOrganisations(data || []);
-        
-        // Auto-select première org si aucune sélectionnée
-        if (data?.length && !currentOrg) {
-          setCurrentOrg(data[0]);
-          localStorage.setItem('currentOrgId', data[0].id);
+        if (error) {
+          console.error('[OrganisationProvider] Erreur lors du chargement des organisations:', error);
+          throw error;
         }
+
+        console.log('[OrganisationProvider] Organisations chargées:', data?.length || 0);
+        setOrganisations(data || []);
+
+        // Ne pas auto-sélectionner, laisser currentOrg à null pour forcer le choix explicite
       } else if (isAuthenticated && !profile?.organisation_id) {
-        // L'utilisateur est connecté mais n'a pas d'organisation
+        console.log('[OrganisationProvider] Utilisateur connecté sans organisation - onboarding requis');
         setNeedsOnboarding(true);
+      } else {
+        console.log('[OrganisationProvider] Aucune organisation à charger');
       }
     } catch (error) {
-      console.error('Erreur lors du chargement des organisations:', error);
+      console.error('[OrganisationProvider] Erreur lors du chargement des organisations:', error);
     } finally {
       setIsLoading(false);
+      console.log('[OrganisationProvider] Chargement terminé');
     }
   };
 
   const selectOrganisation = (orgId: string) => {
+    console.log('[OrganisationProvider] Sélection de l\'organisation:', orgId);
     const org = organisations.find(o => o.id === orgId);
     if (org) {
       setCurrentOrg(org);
       localStorage.setItem('currentOrgId', orgId);
-      
+
       // Définir le contexte Supabase
       supabase.functions.invoke('set-organisation-context', {
         body: { organisationId: orgId }
+      }).then(() => {
+        console.log('[OrganisationProvider] Contexte organisationnel mis à jour');
+      }).catch((error) => {
+        console.warn('[OrganisationProvider] Erreur lors de la mise à jour du contexte:', error);
       });
     }
   };
 
   const refreshOrganisations = async () => {
+    console.log('[OrganisationProvider] Actualisation des organisations...');
     setIsLoading(true);
     await fetchOrganisations();
   };
 
   const completeOnboarding = (orgId: string) => {
+    console.log('[OrganisationProvider] Onboarding terminé pour:', orgId);
     setNeedsOnboarding(false);
     // Forcer le rechargement pour récupérer la nouvelle organisation
     refreshOrganisations();
@@ -117,8 +143,14 @@ export const OrganisationProvider: React.FC<Props> = ({ children }) => {
 
   useEffect(() => {
     if (profile) {
+      console.log('[OrganisationProvider] Profil détecté, chargement des organisations...');
       fetchOrganisations();
+    } else if (!isAuthenticated) {
+      console.log('[OrganisationProvider] Utilisateur non authentifié, arrêt du chargement');
+      setIsLoading(false);
     }
+    // Si des organisations existent mais aucune sélectionnée, currentOrg reste null
+    // Le sélecteur d'organisation sera affiché côté UI
   }, [profile, isAuthenticated]);
 
   return (

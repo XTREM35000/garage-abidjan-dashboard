@@ -11,9 +11,10 @@ import { useToast } from '@/hooks/use-toast';
 interface Props {
   isOpen: boolean;
   onComplete: (organisationId: string) => void;
+  plan?: string; // Ajout du plan sélectionné
 }
 
-export const OrganisationOnboarding: React.FC<Props> = ({ isOpen, onComplete }) => {
+export const OrganisationOnboarding: React.FC<Props> = ({ isOpen, onComplete, plan }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
     nom: '',
@@ -39,7 +40,8 @@ export const OrganisationOnboarding: React.FC<Props> = ({ isOpen, onComplete }) 
           nom: formData.nom,
           slug,
           email_admin: formData.adminEmail,
-          password: formData.adminPassword
+          password: formData.adminPassword,
+          plan: plan || 'starter', // Ajout du plan dans la création
         }
       });
 
@@ -95,7 +97,7 @@ export const OrganisationOnboarding: React.FC<Props> = ({ isOpen, onComplete }) 
                   required
                 />
               </div>
-              
+
               <div>
                 <Label htmlFor="slug">Identifiant unique (slug)</Label>
                 <Input
@@ -133,7 +135,7 @@ export const OrganisationOnboarding: React.FC<Props> = ({ isOpen, onComplete }) 
                   required
                 />
               </div>
-              
+
               <div>
                 <Label htmlFor="adminPassword" className="flex items-center gap-2">
                   <Key className="h-4 w-4" />
@@ -164,9 +166,9 @@ export const OrganisationOnboarding: React.FC<Props> = ({ isOpen, onComplete }) 
             </ul>
           </div>
 
-          <Button 
-            type="submit" 
-            className="w-full" 
+          <Button
+            type="submit"
+            className="w-full"
             disabled={isLoading || !formData.nom || !formData.adminEmail || !formData.adminPassword}
           >
             {isLoading ? 'Création en cours...' : 'Créer mon organisation'}

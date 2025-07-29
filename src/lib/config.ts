@@ -190,4 +190,52 @@ export const getCurrencyInfo = (currencyCode: string) => {
   return currencies[currencyCode as keyof typeof currencies] || currencies.XOF;
 };
 
-export default GARAGE_CONFIG;
+// Configuration des timeouts et performances
+export const APP_CONFIG = {
+  // Timeouts pour l'initialisation
+  AUTH_TIMEOUT: 2000, // 2 secondes max pour l'auth
+  ORG_LOAD_TIMEOUT: 3000, // 3 secondes max pour charger les orgs
+
+  // Intervalles pour les animations
+  SPLASH_STEP_INTERVAL: 800, // 800ms entre les étapes
+  PROGRESS_UPDATE_INTERVAL: 50, // 50ms pour la barre de progression
+
+  // Configuration des logs
+  DEBUG_MODE: process.env.NODE_ENV === 'development',
+  LOG_PREFIX: '[GaragePro]',
+
+  // Configuration des redirections
+  DEFAULT_REDIRECT: '/dashboard',
+  AUTH_REDIRECT: '/auth',
+  CREATE_ORG_REDIRECT: '/create-organisation',
+
+  // Configuration des animations
+  ANIMATION_DURATION: 300,
+  TRANSITION_DURATION: 200,
+};
+
+// Configuration Supabase
+export const SUPABASE_CONFIG = {
+  // Timeouts pour les requêtes
+  REQUEST_TIMEOUT: 5000,
+
+  // Configuration des fonctions Edge
+  FUNCTION_TIMEOUT: 10000,
+
+  // Configuration du cache
+  CACHE_DURATION: 5 * 60 * 1000, // 5 minutes
+};
+
+// Configuration de l'interface
+export const UI_CONFIG = {
+  // Délais pour les toasts
+  TOAST_DURATION: 3000,
+
+  // Configuration des modales
+  MODAL_ANIMATION_DURATION: 200,
+
+  // Configuration des loaders
+  LOADER_DELAY: 500,
+};
+
+export default APP_CONFIG;

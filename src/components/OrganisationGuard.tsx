@@ -2,84 +2,68 @@ import React, { useEffect, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { Loader2 } from 'lucide-react';
+import { useOrganisation } from '@/components/OrganisationProvider';
+import { Loader2, Shield, Building } from 'lucide-react';
 
 interface OrganisationGuardProps {
   children: React.ReactNode;
 }
 
 const OrganisationGuard: React.FC<OrganisationGuardProps> = ({ children }) => {
-  const { user, isLoading: authLoading } = useAuth();
-  const [hasOrganisation, setHasOrganisation] = useState<boolean | null>(null);
+  const { user, isAuthenticated, hasOrganisation, isLoading: authLoading, checkOrganisationAccess } = useAuth();
+  const { currentOrg, organisations, isLoading: orgLoading, needsOnboarding } = useOrganisation();
   const [isFirstLaunch, setIsFirstLaunch] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     checkOrganisationStatus();
-  }, [user]);
+  }, [user, isAuthenticated, hasOrganisation]);
 
   const checkOrganisationStatus = async () => {
     try {
       // Vérifier s'il y a des organisations en base
-      const { data: orgsCount, error: countError } = await supabase
-        .from('organisations')
-        .select('id', { count: 'exact', head: true });
+      const hasOrganisations = await checkOrganisationAccess();
+      setIsFirstLaunch(!hasOrganisations);
 
-      if (countError) throw countError;
-
-      const isFirstTime = (orgsCount as any)?.count === 0;
-      setIsFirstLaunch(isFirstTime);
-
-      if (isFirstTime) {
+      if (!hasOrganisations) {
         // Premier lancement, aucune organisation
-        setHasOrganisation(false);
         setLoading(false);
         return;
       }
 
-      if (!user) {
-        // Utilisateur non connecté, rediriger vers AuthGate
-        setHasOrganisation(false);
+      if (!isAuthenticated) {
+        // Utilisateur non connecté
         setLoading(false);
         return;
       }
 
-      // Vérifier si l'utilisateur a une organisation
-      const { data: profile, error: profileError } = await supabase
-        .from('users')
-        .select('organisation_id, role')
-        .eq('email', user.email)
-        .single();
-
-      if (profileError) {
-        console.error('Erreur profil utilisateur:', profileError);
-        setHasOrganisation(false);
-      } else {
-        const hasValidOrg = !!profile?.organisation_id;
-        setHasOrganisation(hasValidOrg);
-
-        if (hasValidOrg) {
-          // Définir le contexte organisationnel
-          await supabase.functions.invoke('set-organisation-context', {
-            body: { organisationId: profile.organisation_id }
-          });
-        }
+      // Utilisateur connecté, vérifier s'il a une organisation
+      if (!hasOrganisation) {
+        setLoading(false);
+        return;
       }
+
+      // Tout est OK
+      setLoading(false);
     } catch (error) {
       console.error('Erreur vérification organisation:', error);
-      setHasOrganisation(false);
-    } finally {
       setLoading(false);
     }
   };
 
   // Affichage du loader pendant la vérification
-  if (authLoading || loading) {
+  if (authLoading || orgLoading || loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
-          <p className="text-muted-foreground">Vérification des accès...</p>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
+        <div className="text-center space-y-4">
+          <div className="relative">
+            <Shield className="h-12 w-12 text-blue-600 mx-auto mb-4 animate-pulse" />
+            <div className="absolute inset-0 flex items-center justify-center">
+              <Loader2 className="h-6 w-6 animate-spin text-blue-500" />
+            </div>
+          </div>
+          <p className="text-muted-foreground font-medium">Vérification des accès...</p>
+          <p className="text-sm text-muted-foreground">Sécurisation de votre session</p>
         </div>
       </div>
     );
@@ -90,9 +74,28 @@ const OrganisationGuard: React.FC<OrganisationGuardProps> = ({ children }) => {
     return <Navigate to="/create-organisation" replace />;
   }
 
-  // Pas d'utilisateur ou pas d'organisation - rediriger vers AuthGate
-  if (!user || !hasOrganisation) {
-    return <Navigate to="/auth-gate" replace />;
+  // Pas d'utilisateur connecté - rediriger vers AuthGate
+  if (!isAuthenticated) {
+    return <Navigate to="/auth" replace />;
+  }
+
+  // Utilisateur connecté mais pas d'organisation - rediriger vers AuthGate
+  if (!hasOrganisation) {
+    return <Navigate to="/auth" replace />;
+  }
+
+  // Besoin d'onboarding - rediriger vers l'onboarding
+  if (needsOnboarding) {
+    if (window.location.pathname !== '/organisation-onboarding') {
+      return <Navigate to="/organisation-onboarding" replace />;
+    }
+  }
+
+  // Si aucune organisation sélectionnée mais des organisations existent, forcer le sélecteur
+  if (!currentOrg && organisations.length > 0) {
+    if (window.location.pathname !== '/organisation-selector') {
+      return <Navigate to="/organisation-selector" replace />;
+    }
   }
 
   // Utilisateur connecté avec organisation valide
