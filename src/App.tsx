@@ -36,6 +36,7 @@ import { supabase } from '@/integrations/supabase/client';
 
 // Layout
 import UnifiedLayout from '@/layout/UnifiedLayout';
+import GlobalLayout from '@/layout/GlobalLayout';
 
 // Legacy Components (pour compatibilité)
 import PrivateRoute from '@/routes/PrivateRoute';
@@ -159,11 +160,12 @@ const AppContent = () => {
   }
 
   return (
-    <Routes>
-      {/* =================== PAGES PUBLIQUES =================== */}
-      <Route path="/" element={<Index />} />
-      <Route path="/a-propos" element={<APropos />} />
-      <Route path="/aide" element={<Aide />} />
+    <GlobalLayout showHeader={true} showFooter={true}>
+      <Routes>
+        {/* =================== PAGES PUBLIQUES =================== */}
+        <Route path="/" element={<Index />} />
+        <Route path="/a-propos" element={<APropos />} />
+        <Route path="/aide" element={<Aide />} />
 
       {/* =================== AUTHENTIFICATION SÉCURISÉE =================== */}
       <Route path="/create-organisation" element={<CreateOrganisationForm />} />
@@ -268,9 +270,10 @@ const AppContent = () => {
         </UnifiedLayout>
       } />
 
-      {/* =================== PAGE 404 =================== */}
-      <Route path="*" element={<NotFound />} />
-    </Routes>
+        {/* =================== PAGE 404 =================== */}
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+    </GlobalLayout>
   );
 };
 

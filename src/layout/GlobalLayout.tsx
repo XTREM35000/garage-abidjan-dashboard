@@ -20,14 +20,11 @@ const GlobalLayout: React.FC<GlobalLayoutProps> = ({
   const { isAuthenticated } = useAuth();
   const { currentOrg } = useOrganisation();
 
-  // Pages qui ne doivent pas avoir le header/footer
+  // Pages qui ne doivent pas avoir le header/footer (pages spéciales)
   const excludedPages = [
     '/',
     '/auth',
-    '/connexion',
-    '/organisation-onboarding',
-    '/organisation-selector',
-    '/create-organisation'
+    '/connexion'
   ];
 
   // Pages qui ne doivent pas avoir le header (comme les modals plein écran)
@@ -41,13 +38,11 @@ const GlobalLayout: React.FC<GlobalLayoutProps> = ({
   const footerExcludedPages = [
     '/',
     '/auth',
-    '/connexion',
-    '/organisation-onboarding'
+    '/connexion'
   ];
 
-  const shouldShowHeader = showHeader &&
-    !headerExcludedPages.includes(location.pathname) &&
-    isAuthenticated;
+    const shouldShowHeader = showHeader &&
+    !headerExcludedPages.includes(location.pathname);
 
   const shouldShowFooter = showFooter &&
     !footerExcludedPages.includes(location.pathname);
