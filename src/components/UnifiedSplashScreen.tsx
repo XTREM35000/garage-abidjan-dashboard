@@ -1,11 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { Car, Wrench, Zap, Building2, CheckCircle, Shield, Loader2 } from 'lucide-react';
+import { Car, Wrench, Zap, Building2, CheckCircle, Shield, Loader2, Crown, Users, Sparkles } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useOrganisation } from '@/components/OrganisationProvider';
+import { useMultiInstanceSetup } from '@/hooks/useMultiInstanceSetup';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { APP_CONFIG } from '@/lib/config';
+
+// Import des nouveaux composants
+import SuperAdminSetupModal from './SuperAdminSetupModal';
+import PricingModal from './PricingModal';
+import OrganisationCRUDModal from './OrganisationCRUDModal';
+import AdminCRUDModal from './AdminCRUDModal';
 
 interface UnifiedSplashScreenProps {
   onComplete: () => void;
@@ -20,6 +27,16 @@ const UnifiedSplashScreen: React.FC<UnifiedSplashScreenProps> = ({ onComplete })
   const { isAuthenticated, hasOrganisation, isLoading: authLoading } = useAuth();
   const { currentOrg, isLoading: orgLoading, needsOnboarding } = useOrganisation();
 
+  // Hook pour l'initialisation multi-instances
+  const {
+    setupState,
+    handleSuperAdminComplete,
+    handlePlanSelect,
+    handleOrganisationComplete,
+    handleAdminComplete,
+    handleAuthComplete
+  } = useMultiInstanceSetup();
+
   const addLog = (message: string) => {
     if (APP_CONFIG.DEBUG_MODE) {
       console.log(`${APP_CONFIG.LOG_PREFIX} ${message}`);
@@ -28,107 +45,97 @@ const UnifiedSplashScreen: React.FC<UnifiedSplashScreenProps> = ({ onComplete })
   };
 
   const steps = [
-    { name: 'Initialisation de Garage Pro', icon: Building2, color: 'from-blue-500 to-blue-600' },
-    { name: 'Vérification de la session', icon: Shield, color: 'from-yellow-500 to-orange-500' },
-    { name: 'Chargement des organisations', icon: Zap, color: 'from-green-500 to-emerald-600' },
-    { name: 'Configuration du contexte', icon: Wrench, color: 'from-purple-500 to-pink-500' },
-    { name: 'Préparation de l\'interface', icon: Car, color: 'from-green-500 to-teal-600' }
+    { name: 'Vérification Super-Admin', icon: Crown, color: 'from-green-500 to-emerald-600' },
+    { name: 'Sélection du plan', icon: Sparkles, color: 'from-blue-500 to-cyan-600' },
+    { name: 'Création de l\'organisation', icon: Building2, color: 'from-purple-500 to-pink-600' },
+    { name: 'Configuration de l\'admin', icon: Users, color: 'from-orange-500 to-red-600' },
+    { name: 'Authentification', icon: Shield, color: 'from-yellow-500 to-orange-500' },
+    { name: 'Finalisation', icon: CheckCircle, color: 'from-green-500 to-teal-600' }
   ];
 
   useEffect(() => {
-    addLog('Démarrage de l\'initialisation...');
+    addLog('Démarrage de l\'initialisation multi-instances...');
 
     const initializeApp = async () => {
       try {
-        // Étape 1: Initialisation
-        setCurrentStep(0);
-        setProgress(10);
-        addLog('Étape 1: Initialisation démarrée');
-        await new Promise(resolve => setTimeout(resolve, 200)); // Réduit à 200ms
-
-        // Étape 2: Vérification de la session
-        setCurrentStep(1);
-        setProgress(30);
-        addLog('Étape 2: Vérification de la session Supabase...');
-
-        // Attendre que l'auth soit chargée (max 2 secondes)
-        let authWaitTime = 0;
-        while (authLoading && authWaitTime < APP_CONFIG.AUTH_TIMEOUT) {
-          await new Promise(resolve => setTimeout(resolve, 50)); // Réduit à 50ms
-          authWaitTime += 50;
+        // Attendre que le setup state soit prêt
+        if (setupState.isLoading) {
+          addLog('Attente de la vérification de l\'état initial...');
+          return;
         }
 
-        addLog(`Auth loading terminé en ${authWaitTime}ms`);
-        setProgress(50);
+        // Mapper les étapes du setup vers les étapes visuelles
+        const stepMapping: Record<string, number> = {
+          'checking': 0,
+          'super-admin': 0,
+          'pricing': 1,
+          'organisation': 2,
+          'admin': 3,
+          'auth': 4,
+          'complete': 5
+        };
 
-        // Étape 3: Vérification des organisations
-        setCurrentStep(2);
-        addLog('Étape 3: Vérification des organisations...');
+        const currentStepIndex = stepMapping[setupState.step] || 0;
+        const progressPercentage = ((currentStepIndex + 1) / steps.length) * 100;
 
-        const { data: orgsCount, error } = await supabase
-          .from('organisations')
-          .select('id', { count: 'exact', head: true });
+        setCurrentStep(currentStepIndex);
+        setProgress(progressPercentage);
 
-        if (error) {
-          addLog(`Erreur lors de la vérification des organisations: ${error.message}`);
-          throw error;
+        addLog(`Étape actuelle: ${setupState.step} (${currentStepIndex + 1}/${steps.length})`);
+
+        // Si l'initialisation est complète, rediriger
+        if (setupState.step === 'complete') {
+          setProgress(100);
+          addLog('Initialisation multi-instances terminée');
+
+          setShowCheckmark(true);
+          setTimeout(() => {
+            if (window.location.pathname === '/') {
+              navigate('/dashboard', { replace: true });
+            }
+            onComplete();
+          }, 500);
         }
-
-        const hasOrganisations = (orgsCount as any)?.count > 0;
-        addLog(`Organisations trouvées: ${(orgsCount as any)?.count}`);
-        setProgress(70);
-
-        // Étape 4: Configuration du contexte
-        setCurrentStep(3);
-        addLog('Étape 4: Configuration du contexte...');
-
-        if (isAuthenticated && hasOrganisation && currentOrg) {
-          try {
-            await supabase.functions.invoke('set-organisation-context', {
-              body: { organisationId: currentOrg.id }
-            });
-            addLog('Contexte organisationnel configuré');
-          } catch (contextError) {
-            addLog('Erreur lors de la configuration du contexte (non critique)');
-          }
-        }
-
-        setProgress(85);
-
-        // Étape 5: Préparation de l'interface
-        setCurrentStep(4);
-        addLog('Étape 5: Préparation de l\'interface...');
-
-        // Déterminer la redirection
-        let targetRoute = '/auth';
-
-        setProgress(100);
-        addLog(`Initialisation terminée, redirection vers ${targetRoute}`);
-
-        // Animation de fin (réduite)
-        setShowCheckmark(true);
-        setTimeout(() => {
-          if (window.location.pathname === '/') {
-            navigate(targetRoute, { replace: true });
-          }
-          onComplete();
-        }, 500); // Réduit à 500ms
 
       } catch (error) {
         addLog(`Erreur lors de l'initialisation: ${error}`);
         toast.error('Erreur lors de l\'initialisation');
         setTimeout(() => {
-          navigate(APP_CONFIG.AUTH_REDIRECT, { replace: true });
+          navigate('/auth', { replace: true });
           onComplete();
         }, 800);
       }
     };
 
     initializeApp();
-  }, [isAuthenticated, hasOrganisation, currentOrg, authLoading, orgLoading, needsOnboarding, navigate, onComplete]);
+  }, [setupState, navigate, onComplete]);
 
   return (
-    <div className="fixed inset-0 bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center z-50">
+    <>
+      {/* Modals pour l'initialisation multi-instances */}
+      <SuperAdminSetupModal
+        isOpen={setupState.step === 'super-admin'}
+        onComplete={handleSuperAdminComplete}
+      />
+
+      <PricingModal
+        isOpen={setupState.step === 'pricing'}
+        onSelectPlan={handlePlanSelect}
+      />
+
+      <OrganisationCRUDModal
+        isOpen={setupState.step === 'organisation'}
+        selectedPlan={setupState.selectedPlan || 'free'}
+        onComplete={handleOrganisationComplete}
+      />
+
+      <AdminCRUDModal
+        isOpen={setupState.step === 'admin'}
+        organisationData={setupState.organisationData}
+        onComplete={handleAdminComplete}
+      />
+
+      <div className="fixed inset-0 bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center z-50">
       {/* Particules animées en arrière-plan */}
       <div className="absolute inset-0 overflow-hidden">
         {[...Array(20)].map((_, i) => (
@@ -277,6 +284,7 @@ const UnifiedSplashScreen: React.FC<UnifiedSplashScreenProps> = ({ onComplete })
         </div>
       )}
     </div>
+    </>
   );
 };
 

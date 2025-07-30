@@ -155,7 +155,7 @@ export const MultiGarageAdminPanel: React.FC = () => {
               Nouveau Garage
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-md">
+          <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Créer une nouvelle organisation</DialogTitle>
             </DialogHeader>
@@ -226,7 +226,7 @@ export const MultiGarageAdminPanel: React.FC = () => {
                 </Select>
               </div>
 
-              <Button 
+              <Button
                 onClick={createOrganisation}
                 className="w-full"
                 disabled={!newOrgForm.nom || !newOrgForm.email || !newOrgForm.adminPassword}
@@ -248,7 +248,7 @@ export const MultiGarageAdminPanel: React.FC = () => {
             <div className="text-2xl font-bold">{organisations.length}</div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium">Utilisateurs Total</CardTitle>
@@ -301,7 +301,7 @@ export const MultiGarageAdminPanel: React.FC = () => {
                 </Badge>
               </div>
             </CardHeader>
-            
+
             <CardContent className="space-y-3">
               <div className="grid grid-cols-3 gap-2 text-center">
                 <div className="flex flex-col items-center">

@@ -70,7 +70,7 @@ export const OrganisationOnboarding: React.FC<Props> = ({ isOpen, onComplete, pl
 
   return (
     <Dialog open={isOpen} onOpenChange={() => {}}>
-      <DialogContent className="max-w-2xl">
+              <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-center text-2xl font-bold flex items-center justify-center gap-2">
             <Building2 className="h-6 w-6 text-primary" />

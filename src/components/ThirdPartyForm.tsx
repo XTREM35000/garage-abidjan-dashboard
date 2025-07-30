@@ -169,7 +169,7 @@ const ThirdPartyForm: React.FC<ThirdPartyFormProps> = ({
   if (showSuccess) {
     return (
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
           <div className="text-center py-8">
             <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
             <h3 className="text-xl font-bold mb-2">Demande Envoyée !</h3>
