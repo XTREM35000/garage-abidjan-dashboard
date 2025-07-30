@@ -7,487 +7,608 @@ export type Json =
   | Json[]
 
 export type Database = {
+  // Allows to automatically instanciate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
+  __InternalSupabase: {
+    PostgrestVersion: "12.2.12 (cd3cf9e)"
+  }
   public: {
     Tables: {
-      clients: {
+      customers: {
         Row: {
-          id: string
-          nom: string
-          prenom: string
-          telephone: string
+          address: string | null
+          city: string | null
+          created_at: string | null
           email: string | null
-          adresse: string | null
-          date_naissance: string | null
-          numero_permis: string | null
-          date_creation: string
-          date_modification: string
+          first_name: string
+          id: string
+          last_name: string
           notes: string | null
-          statut: 'actif' | 'inactif' | 'bloque'
+          organisation_id: string | null
+          phone: string | null
+          postal_code: string | null
+          updated_at: string | null
         }
         Insert: {
-          id?: string
-          nom: string
-          prenom: string
-          telephone: string
+          address?: string | null
+          city?: string | null
+          created_at?: string | null
           email?: string | null
-          adresse?: string | null
-          date_naissance?: string | null
-          numero_permis?: string | null
-          date_creation?: string
-          date_modification?: string
+          first_name: string
+          id?: string
+          last_name: string
           notes?: string | null
-          statut?: 'actif' | 'inactif' | 'bloque'
+          organisation_id?: string | null
+          phone?: string | null
+          postal_code?: string | null
+          updated_at?: string | null
         }
         Update: {
-          id?: string
-          nom?: string
-          prenom?: string
-          telephone?: string
+          address?: string | null
+          city?: string | null
+          created_at?: string | null
           email?: string | null
-          adresse?: string | null
-          date_naissance?: string | null
-          numero_permis?: string | null
-          date_creation?: string
-          date_modification?: string
+          first_name?: string
+          id?: string
+          last_name?: string
           notes?: string | null
-          statut?: 'actif' | 'inactif' | 'bloque'
+          organisation_id?: string | null
+          phone?: string | null
+          postal_code?: string | null
+          updated_at?: string | null
         }
-      }
-      vehicules: {
-        Row: {
-          id: string
-          client_id: string
-          marque: string
-          modele: string
-          annee: number | null
-          immatriculation: string
-          couleur: string | null
-          kilometrage: number | null
-          carburant: 'essence' | 'diesel' | 'hybride' | 'electrique' | null
-          transmission: 'manuelle' | 'automatique' | null
-          date_acquisition: string | null
-          date_creation: string
-          date_modification: string
-          statut: 'actif' | 'hors_service' | 'vendu'
-        }
-        Insert: {
-          id?: string
-          client_id: string
-          marque: string
-          modele: string
-          annee?: number | null
-          immatriculation: string
-          couleur?: string | null
-          kilometrage?: number | null
-          carburant?: 'essence' | 'diesel' | 'hybride' | 'electrique' | null
-          transmission?: 'manuelle' | 'automatique' | null
-          date_acquisition?: string | null
-          date_creation?: string
-          date_modification?: string
-          statut?: 'actif' | 'hors_service' | 'vendu'
-        }
-        Update: {
-          id?: string
-          client_id?: string
-          marque?: string
-          modele?: string
-          annee?: number | null
-          immatriculation?: string
-          couleur?: string | null
-          kilometrage?: number | null
-          carburant?: 'essence' | 'diesel' | 'hybride' | 'electrique' | null
-          transmission?: 'manuelle' | 'automatique' | null
-          date_acquisition?: string | null
-          date_creation?: string
-          date_modification?: string
-          statut?: 'actif' | 'hors_service' | 'vendu'
-        }
-      }
-      interventions: {
-        Row: {
-          id: string
-          vehicule_id: string
-          client_id: string
-          type_intervention: string
-          description: string | null
-          date_debut: string
-          date_fin: string | null
-          duree_estimee: number | null
-          duree_reelle: number | null
-          cout_estime: number | null
-          cout_final: number | null
-          statut: 'en_attente' | 'en_cours' | 'termine' | 'annule'
-          priorite: 'basse' | 'normale' | 'haute' | 'urgente'
-          mecaniciens: string[] | null
-          pieces_utilisees: Json | null
-          notes: string | null
-          date_creation: string
-          date_modification: string
-        }
-        Insert: {
-          id?: string
-          vehicule_id: string
-          client_id: string
-          type_intervention: string
-          description?: string | null
-          date_debut?: string
-          date_fin?: string | null
-          duree_estimee?: number | null
-          duree_reelle?: number | null
-          cout_estime?: number | null
-          cout_final?: number | null
-          statut?: 'en_attente' | 'en_cours' | 'termine' | 'annule'
-          priorite?: 'basse' | 'normale' | 'haute' | 'urgente'
-          mecaniciens?: string[] | null
-          pieces_utilisees?: Json | null
-          notes?: string | null
-          date_creation?: string
-          date_modification?: string
-        }
-        Update: {
-          id?: string
-          vehicule_id?: string
-          client_id?: string
-          type_intervention?: string
-          description?: string | null
-          date_debut?: string
-          date_fin?: string | null
-          duree_estimee?: number | null
-          duree_reelle?: number | null
-          cout_estime?: number | null
-          cout_final?: number | null
-          statut?: 'en_attente' | 'en_cours' | 'termine' | 'annule'
-          priorite?: 'basse' | 'normale' | 'haute' | 'urgente'
-          mecaniciens?: string[] | null
-          pieces_utilisees?: Json | null
-          notes?: string | null
-          date_creation?: string
-          date_modification?: string
-        }
-      }
-      pieces: {
-        Row: {
-          id: string
-          reference: string
-          nom: string
-          description: string | null
-          categorie: string | null
-          marque: string | null
-          prix_achat: number | null
-          prix_vente: number | null
-          stock_actuel: number
-          stock_minimum: number
-          fournisseur: string | null
-          date_creation: string
-          date_modification: string
-          statut: 'actif' | 'inactif' | 'rupture'
-        }
-        Insert: {
-          id?: string
-          reference: string
-          nom: string
-          description?: string | null
-          categorie?: string | null
-          marque?: string | null
-          prix_achat?: number | null
-          prix_vente?: number | null
-          stock_actuel?: number
-          stock_minimum?: number
-          fournisseur?: string | null
-          date_creation?: string
-          date_modification?: string
-          statut?: 'actif' | 'inactif' | 'rupture'
-        }
-        Update: {
-          id?: string
-          reference?: string
-          nom?: string
-          description?: string | null
-          categorie?: string | null
-          marque?: string | null
-          prix_achat?: number | null
-          prix_vente?: number | null
-          stock_actuel?: number
-          stock_minimum?: number
-          fournisseur?: string | null
-          date_creation?: string
-          date_modification?: string
-          statut?: 'actif' | 'inactif' | 'rupture'
-        }
-      }
-      medias: {
-        Row: {
-          id: string
-          type: 'gif' | 'image' | 'video'
-          url: string
-          titre: string | null
-          description: string | null
-          categorie: string | null
-          tags: string[] | null
-          taille: number | null
-          largeur: number | null
-          hauteur: number | null
-          date_creation: string
-          statut: 'actif' | 'inactif'
-        }
-        Insert: {
-          id?: string
-          type: 'gif' | 'image' | 'video'
-          url: string
-          titre?: string | null
-          description?: string | null
-          categorie?: string | null
-          tags?: string[] | null
-          taille?: number | null
-          largeur?: number | null
-          hauteur?: number | null
-          date_creation?: string
-          statut?: 'actif' | 'inactif'
-        }
-        Update: {
-          id?: string
-          type?: 'gif' | 'image' | 'video'
-          url?: string
-          titre?: string | null
-          description?: string | null
-          categorie?: string | null
-          tags?: string[] | null
-          taille?: number | null
-          largeur?: number | null
-          hauteur?: number | null
-          date_creation?: string
-          statut?: 'actif' | 'inactif'
-        }
-      }
-      profiles: {
-        Row: {
-          id: string
-          email: string
-          nom: string | null
-          prenom: string | null
-          role: 'proprietaire' | 'chef-garagiste' | 'technicien' | 'comptable'
-          telephone: string | null
-          avatar_url: string | null
-          date_creation: string
-          date_modification: string
-          statut: 'actif' | 'inactif' | 'bloque'
-        }
-        Insert: {
-          id: string
-          email: string
-          nom?: string | null
-          prenom?: string | null
-          role?: 'proprietaire' | 'chef-garagiste' | 'technicien' | 'comptable'
-          telephone?: string | null
-          avatar_url?: string | null
-          date_creation?: string
-          date_modification?: string
-          statut?: 'actif' | 'inactif' | 'bloque'
-        }
-        Update: {
-          id?: string
-          email?: string
-          nom?: string | null
-          prenom?: string | null
-          role?: 'proprietaire' | 'chef-garagiste' | 'technicien' | 'comptable'
-          telephone?: string | null
-          avatar_url?: string | null
-          date_creation?: string
-          date_modification?: string
-          statut?: 'actif' | 'inactif' | 'bloque'
-        }
+        Relationships: [
+          {
+            foreignKeyName: "customers_organisation_id_fkey"
+            columns: ["organisation_id"]
+            isOneToOne: false
+            referencedRelation: "organisations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       notifications: {
         Row: {
+          created_at: string | null
           id: string
-          type: string
-          titre: string
+          is_read: boolean | null
           message: string
-          donnees: Json | null
-          utilisateur_id: string | null
-          date_creation: string
-          date_lecture: string | null
-          statut: 'non_lu' | 'lu' | 'archive'
+          organisation_id: string | null
+          title: string
+          type: string | null
+          user_id: string | null
         }
         Insert: {
+          created_at?: string | null
           id?: string
-          type: string
-          titre: string
+          is_read?: boolean | null
           message: string
-          donnees?: Json | null
-          utilisateur_id?: string | null
-          date_creation?: string
-          date_lecture?: string | null
-          statut?: 'non_lu' | 'lu' | 'archive'
+          organisation_id?: string | null
+          title: string
+          type?: string | null
+          user_id?: string | null
         }
         Update: {
+          created_at?: string | null
           id?: string
-          type?: string
-          titre?: string
+          is_read?: boolean | null
           message?: string
-          donnees?: Json | null
-          utilisateur_id?: string | null
-          date_creation?: string
-          date_lecture?: string | null
-          statut?: 'non_lu' | 'lu' | 'archive'
+          organisation_id?: string | null
+          title?: string
+          type?: string | null
+          user_id?: string | null
         }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_organisation_id_fkey"
+            columns: ["organisation_id"]
+            isOneToOne: false
+            referencedRelation: "organisations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
       }
-      statistiques: {
+      organisations: {
         Row: {
+          address: string | null
+          city: string | null
+          code: string
+          created_at: string | null
+          email: string | null
           id: string
-          date: string
-          type: string
-          valeur: Json
-          date_creation: string
+          is_active: boolean | null
+          logo_url: string | null
+          name: string
+          phone: string | null
+          postal_code: string | null
+          slug: string | null
+          subscription_end: string | null
+          subscription_type: string | null
+          updated_at: string | null
         }
         Insert: {
+          address?: string | null
+          city?: string | null
+          code: string
+          created_at?: string | null
+          email?: string | null
           id?: string
-          date: string
-          type: string
-          valeur: Json
-          date_creation?: string
+          is_active?: boolean | null
+          logo_url?: string | null
+          name: string
+          phone?: string | null
+          postal_code?: string | null
+          slug?: string | null
+          subscription_end?: string | null
+          subscription_type?: string | null
+          updated_at?: string | null
         }
         Update: {
+          address?: string | null
+          city?: string | null
+          code?: string
+          created_at?: string | null
+          email?: string | null
           id?: string
-          date?: string
-          type?: string
-          valeur?: Json
-          date_creation?: string
+          is_active?: boolean | null
+          logo_url?: string | null
+          name?: string
+          phone?: string | null
+          postal_code?: string | null
+          slug?: string | null
+          subscription_end?: string | null
+          subscription_type?: string | null
+          updated_at?: string | null
         }
+        Relationships: []
+      }
+      products: {
+        Row: {
+          brand: string | null
+          category: string | null
+          cost_price: number | null
+          created_at: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          location: string | null
+          max_stock_level: number | null
+          min_stock_level: number | null
+          name: string
+          organisation_id: string | null
+          quantity: number
+          sku: string | null
+          supplier: string | null
+          unit: string | null
+          unit_price: number
+          updated_at: string | null
+        }
+        Insert: {
+          brand?: string | null
+          category?: string | null
+          cost_price?: number | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          location?: string | null
+          max_stock_level?: number | null
+          min_stock_level?: number | null
+          name: string
+          organisation_id?: string | null
+          quantity?: number
+          sku?: string | null
+          supplier?: string | null
+          unit?: string | null
+          unit_price?: number
+          updated_at?: string | null
+        }
+        Update: {
+          brand?: string | null
+          category?: string | null
+          cost_price?: number | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          location?: string | null
+          max_stock_level?: number | null
+          min_stock_level?: number | null
+          name?: string
+          organisation_id?: string | null
+          quantity?: number
+          sku?: string | null
+          supplier?: string | null
+          unit?: string | null
+          unit_price?: number
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "products_organisation_id_fkey"
+            columns: ["organisation_id"]
+            isOneToOne: false
+            referencedRelation: "organisations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      repairs: {
+        Row: {
+          actual_cost: number | null
+          actual_hours: number | null
+          created_at: string | null
+          customer_id: string | null
+          customer_signature: string | null
+          delivery_date: string | null
+          description: string | null
+          diagnosis: string | null
+          end_date: string | null
+          estimated_cost: number | null
+          estimated_hours: number | null
+          id: string
+          internal_notes: string | null
+          labor_cost: number | null
+          organisation_id: string | null
+          parts_cost: number | null
+          priority: string | null
+          repair_number: string
+          start_date: string | null
+          status: string | null
+          technician_id: string | null
+          technician_notes: string | null
+          title: string
+          updated_at: string | null
+          vehicle_id: string | null
+          work_performed: string | null
+        }
+        Insert: {
+          actual_cost?: number | null
+          actual_hours?: number | null
+          created_at?: string | null
+          customer_id?: string | null
+          customer_signature?: string | null
+          delivery_date?: string | null
+          description?: string | null
+          diagnosis?: string | null
+          end_date?: string | null
+          estimated_cost?: number | null
+          estimated_hours?: number | null
+          id?: string
+          internal_notes?: string | null
+          labor_cost?: number | null
+          organisation_id?: string | null
+          parts_cost?: number | null
+          priority?: string | null
+          repair_number: string
+          start_date?: string | null
+          status?: string | null
+          technician_id?: string | null
+          technician_notes?: string | null
+          title: string
+          updated_at?: string | null
+          vehicle_id?: string | null
+          work_performed?: string | null
+        }
+        Update: {
+          actual_cost?: number | null
+          actual_hours?: number | null
+          created_at?: string | null
+          customer_id?: string | null
+          customer_signature?: string | null
+          delivery_date?: string | null
+          description?: string | null
+          diagnosis?: string | null
+          end_date?: string | null
+          estimated_cost?: number | null
+          estimated_hours?: number | null
+          id?: string
+          internal_notes?: string | null
+          labor_cost?: number | null
+          organisation_id?: string | null
+          parts_cost?: number | null
+          priority?: string | null
+          repair_number?: string
+          start_date?: string | null
+          status?: string | null
+          technician_id?: string | null
+          technician_notes?: string | null
+          title?: string
+          updated_at?: string | null
+          vehicle_id?: string | null
+          work_performed?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "repairs_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "repairs_organisation_id_fkey"
+            columns: ["organisation_id"]
+            isOneToOne: false
+            referencedRelation: "organisations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "repairs_technician_id_fkey"
+            columns: ["technician_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "repairs_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "vehicles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      stock_movements: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          id: string
+          movement_type: string
+          organisation_id: string | null
+          product_id: string | null
+          quantity: number
+          reason: string | null
+          reference: string | null
+          repair_id: string | null
+          unit_cost: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          movement_type: string
+          organisation_id?: string | null
+          product_id?: string | null
+          quantity: number
+          reason?: string | null
+          reference?: string | null
+          repair_id?: string | null
+          unit_cost?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          movement_type?: string
+          organisation_id?: string | null
+          product_id?: string | null
+          quantity?: number
+          reason?: string | null
+          reference?: string | null
+          repair_id?: string | null
+          unit_cost?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_movements_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_movements_organisation_id_fkey"
+            columns: ["organisation_id"]
+            isOneToOne: false
+            referencedRelation: "organisations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_movements_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_movements_repair_id_fkey"
+            columns: ["repair_id"]
+            isOneToOne: false
+            referencedRelation: "repairs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      super_admins: {
+        Row: {
+          created_at: string | null
+          email: string
+          full_name: string | null
+          id: string
+          is_active: boolean | null
+          phone: string | null
+          title: string | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          email: string
+          full_name?: string | null
+          id?: string
+          is_active?: boolean | null
+          phone?: string | null
+          title?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          email?: string
+          full_name?: string | null
+          id?: string
+          is_active?: boolean | null
+          phone?: string | null
+          title?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      users: {
+        Row: {
+          auth_user_id: string | null
+          created_at: string | null
+          full_name: string | null
+          id: string
+          is_active: boolean | null
+          organisation_id: string | null
+          phone: string | null
+          role: string
+          updated_at: string | null
+        }
+        Insert: {
+          auth_user_id?: string | null
+          created_at?: string | null
+          full_name?: string | null
+          id?: string
+          is_active?: boolean | null
+          organisation_id?: string | null
+          phone?: string | null
+          role: string
+          updated_at?: string | null
+        }
+        Update: {
+          auth_user_id?: string | null
+          created_at?: string | null
+          full_name?: string | null
+          id?: string
+          is_active?: boolean | null
+          organisation_id?: string | null
+          phone?: string | null
+          role?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "users_organisation_id_fkey"
+            columns: ["organisation_id"]
+            isOneToOne: false
+            referencedRelation: "organisations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vehicles: {
+        Row: {
+          brand: string | null
+          color: string | null
+          created_at: string | null
+          customer_id: string | null
+          fuel_type: string | null
+          id: string
+          last_service_date: string | null
+          license_plate: string
+          mileage: number | null
+          model: string | null
+          next_service_date: string | null
+          notes: string | null
+          organisation_id: string | null
+          qr_code: string | null
+          transmission: string | null
+          updated_at: string | null
+          vin: string | null
+          year: number | null
+        }
+        Insert: {
+          brand?: string | null
+          color?: string | null
+          created_at?: string | null
+          customer_id?: string | null
+          fuel_type?: string | null
+          id?: string
+          last_service_date?: string | null
+          license_plate: string
+          mileage?: number | null
+          model?: string | null
+          next_service_date?: string | null
+          notes?: string | null
+          organisation_id?: string | null
+          qr_code?: string | null
+          transmission?: string | null
+          updated_at?: string | null
+          vin?: string | null
+          year?: number | null
+        }
+        Update: {
+          brand?: string | null
+          color?: string | null
+          created_at?: string | null
+          customer_id?: string | null
+          fuel_type?: string | null
+          id?: string
+          last_service_date?: string | null
+          license_plate?: string
+          mileage?: number | null
+          model?: string | null
+          next_service_date?: string | null
+          notes?: string | null
+          organisation_id?: string | null
+          qr_code?: string | null
+          transmission?: string | null
+          updated_at?: string | null
+          vin?: string | null
+          year?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vehicles_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vehicles_organisation_id_fkey"
+            columns: ["organisation_id"]
+            isOneToOne: false
+            referencedRelation: "organisations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
-      interventions_completes: {
-        Row: {
-          id: string | null
-          vehicule_id: string | null
-          client_id: string | null
-          type_intervention: string | null
-          description: string | null
-          date_debut: string | null
-          date_fin: string | null
-          duree_estimee: number | null
-          duree_reelle: number | null
-          cout_estime: number | null
-          cout_final: number | null
-          statut: string | null
-          priorite: string | null
-          mecaniciens: string[] | null
-          pieces_utilisees: Json | null
-          notes: string | null
-          date_creation: string | null
-          date_modification: string | null
-          marque: string | null
-          modele: string | null
-          immatriculation: string | null
-          client_nom: string | null
-          client_prenom: string | null
-          client_telephone: string | null
-        }
-      }
-      pieces_stock_faible: {
-        Row: {
-          id: string | null
-          reference: string | null
-          nom: string | null
-          description: string | null
-          categorie: string | null
-          marque: string | null
-          prix_achat: number | null
-          prix_vente: number | null
-          stock_actuel: number | null
-          stock_minimum: number | null
-          fournisseur: string | null
-          date_creation: string | null
-          date_modification: string | null
-          statut: string | null
-          statut_stock: string | null
-        }
-      }
+      [_ in never]: never
     }
     Functions: {
-      get_dashboard_stats: {
-        Args: Record<PropertyKey, never>
-        Returns: Json
-      }
-      search_clients: {
-        Args: {
-          search_term: string
-        }
-        Returns: {
-          id: string
-          nom: string
-          prenom: string
-          telephone: string
-          email: string | null
-          adresse: string | null
-          statut: string
-        }[]
-      }
-      get_vehicle_history: {
-        Args: {
-          vehicle_id: string
-        }
-        Returns: {
-          id: string
-          type_intervention: string
-          description: string | null
-          date_debut: string
-          date_fin: string | null
-          statut: string
-          cout_final: number | null
-          mecaniciens: string[] | null
-        }[]
-      }
-      create_notification: {
-        Args: {
-          p_type: string
-          p_titre: string
-          p_message: string
-          p_donnees?: Json
-          p_utilisateur_id?: string
-        }
+      generate_repair_number: {
+        Args: { org_id: string }
         Returns: string
       }
-      mark_notification_read: {
-        Args: {
-          notification_id: string
-        }
+      get_user_organisation_id: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
+      get_user_role: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
+      is_super_admin: {
+        Args: Record<PropertyKey, never>
         Returns: boolean
-      }
-      get_unread_notifications: {
-        Args: Record<PropertyKey, never>
-        Returns: {
-          id: string
-          type: string
-          titre: string
-          message: string
-          donnees: Json | null
-          date_creation: string
-        }[]
-      }
-      cleanup_old_notifications: {
-        Args: {
-          days_to_keep?: number
-        }
-        Returns: number
-      }
-      get_notification_stats: {
-        Args: Record<PropertyKey, never>
-        Returns: Json
       }
     }
     Enums: {
-      client_statut: 'actif' | 'inactif' | 'bloque'
-      vehicule_statut: 'actif' | 'hors_service' | 'vendu'
-      intervention_statut: 'en_attente' | 'en_cours' | 'termine' | 'annule'
-      intervention_priorite: 'basse' | 'normale' | 'haute' | 'urgente'
-      piece_statut: 'actif' | 'inactif' | 'rupture'
-      media_type: 'gif' | 'image' | 'video'
-      media_statut: 'actif' | 'inactif'
-      profile_role: 'proprietaire' | 'chef-garagiste' | 'technicien' | 'comptable'
-      profile_statut: 'actif' | 'inactif' | 'bloque'
-      notification_statut: 'non_lu' | 'lu' | 'archive'
+      [_ in never]: never
     }
     CompositeTypes: {
       [_ in never]: never
@@ -495,21 +616,33 @@ export type Database = {
   }
 }
 
+type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
+
+type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
+
 export type Tables<
-  PublicTableNameOrOptions extends
-    | keyof (Database["public"]["Tables"])
-    | { schema: keyof Database },
-  TableName extends PublicTableNameOrOptions extends { schema: keyof Database }
-    ? keyof (Database[PublicTableNameOrOptions["schema"]]["Tables"])
+  DefaultSchemaTableNameOrOptions extends
+    | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
     : never = never,
-> = PublicTableNameOrOptions extends { schema: keyof Database }
-  ? (Database[PublicTableNameOrOptions["schema"]]["Tables"])[TableName] extends {
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
       Row: infer R
     }
     ? R
     : never
-  : PublicTableNameOrOptions extends keyof (Database["public"]["Tables"])
-    ? (Database["public"]["Tables"])[PublicTableNameOrOptions] extends {
+  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])
+    ? (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
         Row: infer R
       }
       ? R
@@ -517,20 +650,24 @@ export type Tables<
     : never
 
 export type TablesInsert<
-  PublicTableNameOrOptions extends
-    | keyof (Database["public"]["Tables"])
-    | { schema: keyof Database },
-  TableName extends PublicTableNameOrOptions extends { schema: keyof Database }
-    ? keyof (Database[PublicTableNameOrOptions["schema"]]["Tables"])
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
     : never = never,
-> = PublicTableNameOrOptions extends { schema: keyof Database }
-  ? (Database[PublicTableNameOrOptions["schema"]]["Tables"])[TableName] extends {
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
       Insert: infer I
     }
     ? I
     : never
-  : PublicTableNameOrOptions extends keyof (Database["public"]["Tables"])
-    ? (Database["public"]["Tables"])[PublicTableNameOrOptions] extends {
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
         Insert: infer I
       }
       ? I
@@ -538,20 +675,24 @@ export type TablesInsert<
     : never
 
 export type TablesUpdate<
-  PublicTableNameOrOptions extends
-    | keyof (Database["public"]["Tables"])
-    | { schema: keyof Database },
-  TableName extends PublicTableNameOrOptions extends { schema: keyof Database }
-    ? keyof (Database[PublicTableNameOrOptions["schema"]]["Tables"])
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
     : never = never,
-> = PublicTableNameOrOptions extends { schema: keyof Database }
-  ? (Database[PublicTableNameOrOptions["schema"]]["Tables"])[TableName] extends {
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
       Update: infer U
     }
     ? U
     : never
-  : PublicTableNameOrOptions extends keyof (Database["public"]["Tables"])
-    ? (Database["public"]["Tables"])[PublicTableNameOrOptions] extends {
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
         Update: infer U
       }
       ? U
@@ -559,29 +700,37 @@ export type TablesUpdate<
     : never
 
 export type Enums<
-  PublicEnumNameOrOptions extends
-    | keyof (Database["public"]["Enums"])
-    | { schema: keyof Database },
-  EnumName extends PublicEnumNameOrOptions extends { schema: keyof Database }
-    ? keyof (Database[PublicEnumNameOrOptions["schema"]]["Enums"])
+  DefaultSchemaEnumNameOrOptions extends
+    | keyof DefaultSchema["Enums"]
+    | { schema: keyof DatabaseWithoutInternals },
+  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
     : never = never,
-> = PublicEnumNameOrOptions extends { schema: keyof Database }
-  ? (Database[PublicEnumNameOrOptions["schema"]]["Enums"])[EnumName]
-  : PublicEnumNameOrOptions extends keyof (Database["public"]["Enums"])
-    ? (Database["public"]["Enums"])[PublicEnumNameOrOptions]
+> = DefaultSchemaEnumNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
+  : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
+    ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
     : never
 
 export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
-    | keyof (Database["public"]["CompositeTypes"])
-    | { schema: keyof Database },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends { schema: keyof Database }
-    ? keyof (Database[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"])
+    | keyof DefaultSchema["CompositeTypes"]
+    | { schema: keyof DatabaseWithoutInternals },
+  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
     : never = never,
-> = PublicCompositeTypeNameOrOptions extends { schema: keyof Database }
-  ? (Database[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"])[CompositeTypeName]
-  : PublicCompositeTypeNameOrOptions extends keyof (Database["public"]["CompositeTypes"])
-    ? (Database["public"]["CompositeTypes"])[PublicCompositeTypeNameOrOptions]
+> = PublicCompositeTypeNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
+  : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
+    ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
     : never
 
 export const Constants = {
