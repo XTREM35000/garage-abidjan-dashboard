@@ -97,8 +97,8 @@ const CreateOrganisationForm: React.FC = () => {
         console.log('Vérification des organisations existantes...');
         const { data, error } = await supabase
           .from('organisations')
-          .select('id, nom')
-          .eq('est_actif', true)
+          .select('id, name')
+          .eq('is_active', true)
           .limit(1);
 
         if (error) {
@@ -110,7 +110,7 @@ const CreateOrganisationForm: React.FC = () => {
 
         // S'il y a déjà des organisations, rediriger vers /auth
         if (data && data.length > 0) {
-          console.log(`Organisation existante trouvée: ${data[0].nom}`);
+          console.log(`Organisation existante trouvée: ${data[0].name}`);
           toast.info('Des organisations existent déjà');
           navigate('/auth');
         } else {
@@ -141,7 +141,7 @@ const CreateOrganisationForm: React.FC = () => {
       // Créer la première organisation
       const { data, error: invokeError } = await supabase.functions.invoke('create-organisation', {
         body: {
-          nom: formData.nom,
+          name: formData.nom,
           slug: formData.slug,
           email_admin: formData.email,
           password: formData.password

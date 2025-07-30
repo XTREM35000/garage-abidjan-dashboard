@@ -12,21 +12,21 @@ import { toast } from 'sonner';
 
 interface Organisation {
   id: string;
-  nom: string;
+  name: string;
   slug: string;
-  plan_abonnement: string;
+  subscription_type: string;
   email: string;
-  telephone?: string;
-  ville?: string;
-  est_actif: boolean;
-  date_creation: string;
+  phone?: string;
+  city?: string;
+  is_active: boolean;
+  created_at: string;
   nb_utilisateurs: number;
   nb_clients: number;
   nb_vehicules: number;
 }
 
 interface NewOrgForm {
-  nom: string;
+  name: string;
   slug: string;
   email: string;
   adminPassword: string;
@@ -38,7 +38,7 @@ export const MultiGarageAdminPanel: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newOrgForm, setNewOrgForm] = useState<NewOrgForm>({
-    nom: '',
+    name: '',
     slug: '',
     email: '',
     adminPassword: '',
@@ -52,12 +52,19 @@ export const MultiGarageAdminPanel: React.FC = () => {
   const fetchOrganisations = async () => {
     try {
       const { data, error } = await supabase
-        .from('vue_administration')
+        .from('organisations')
         .select('*')
-        .order('date_creation', { ascending: false });
+        .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setOrganisations(data || []);
+      // Map data to match interface
+      const mappedData = data?.map(org => ({
+        ...org,
+        nb_utilisateurs: 0,
+        nb_clients: 0,
+        nb_vehicules: 0
+      })) || [];
+      setOrganisations(mappedData);
     } catch (error) {
       console.error('Erreur:', error);
       toast.error('Erreur lors du chargement des organisations');
@@ -70,7 +77,7 @@ export const MultiGarageAdminPanel: React.FC = () => {
     try {
       const { data, error } = await supabase.functions.invoke('create-organisation', {
         body: {
-          nom: newOrgForm.nom,
+          name: newOrgForm.name,
           slug: newOrgForm.slug,
           email_admin: newOrgForm.email,
           password: newOrgForm.adminPassword,
@@ -80,9 +87,9 @@ export const MultiGarageAdminPanel: React.FC = () => {
 
       if (error) throw error;
 
-      toast.success(`Organisation "${newOrgForm.nom}" créée avec succès!`);
+      toast.success(`Organisation "${newOrgForm.name}" créée avec succès!`);
       setShowCreateModal(false);
-      setNewOrgForm({ nom: '', slug: '', email: '', adminPassword: '', plan: 'starter' });
+      setNewOrgForm({ name: '', slug: '', email: '', adminPassword: '', plan: 'starter' });
       fetchOrganisations();
     } catch (error) {
       console.error('Erreur création:', error);
@@ -94,7 +101,7 @@ export const MultiGarageAdminPanel: React.FC = () => {
     try {
       const { error } = await supabase
         .from('organisations')
-        .update({ est_actif: !currentStatus })
+        .update({ is_active: !currentStatus })
         .eq('id', orgId);
 
       if (error) throw error;
@@ -107,8 +114,8 @@ export const MultiGarageAdminPanel: React.FC = () => {
     }
   };
 
-  const generateSlug = (nom: string) => {
-    return nom.toLowerCase()
+  const generateSlug = (name: string) => {
+    return name.toLowerCase()
       .replace(/[àáäâ]/g, 'a')
       .replace(/[èéëê]/g, 'e')
       .replace(/[ìíïî]/g, 'i')
@@ -123,7 +130,7 @@ export const MultiGarageAdminPanel: React.FC = () => {
     switch (plan) {
       case 'starter': return 'bg-blue-100 text-blue-800';
       case 'pro': return 'bg-purple-100 text-purple-800';
-      case 'enterprise': return 'bg-gold-100 text-gold-800';
+      case 'enterprise': return 'bg-amber-100 text-amber-800';
       default: return 'bg-gray-100 text-gray-800';
     }
   };
@@ -161,16 +168,16 @@ export const MultiGarageAdminPanel: React.FC = () => {
             </DialogHeader>
             <div className="space-y-4">
               <div>
-                <Label htmlFor="nom">Nom du garage</Label>
+                <Label htmlFor="name">Nom du garage</Label>
                 <Input
-                  id="nom"
-                  value={newOrgForm.nom}
+                  id="name"
+                  value={newOrgForm.name}
                   onChange={(e) => {
-                    const nom = e.target.value;
+                    const name = e.target.value;
                     setNewOrgForm(prev => ({
                       ...prev,
-                      nom,
-                      slug: generateSlug(nom)
+                      name,
+                      slug: generateSlug(name)
                     }));
                   }}
                   placeholder="Ex: Garage Central Abidjan"
@@ -229,7 +236,7 @@ export const MultiGarageAdminPanel: React.FC = () => {
               <Button
                 onClick={createOrganisation}
                 className="w-full"
-                disabled={!newOrgForm.nom || !newOrgForm.email || !newOrgForm.adminPassword}
+                disabled={!newOrgForm.name || !newOrgForm.email || !newOrgForm.adminPassword}
               >
                 Créer l'organisation
               </Button>
@@ -292,12 +299,12 @@ export const MultiGarageAdminPanel: React.FC = () => {
                 <div className="flex items-center gap-2">
                   <Building2 className="h-5 w-5 text-primary" />
                   <div>
-                    <CardTitle className="text-lg">{org.nom}</CardTitle>
+                    <CardTitle className="text-lg">{org.name}</CardTitle>
                     <p className="text-sm text-muted-foreground">@{org.slug}</p>
                   </div>
                 </div>
-                <Badge className={getPlanBadgeColor(org.plan_abonnement)}>
-                  {org.plan_abonnement}
+                <Badge className={getPlanBadgeColor(org.subscription_type)}>
+                  {org.subscription_type}
                 </Badge>
               </div>
             </CardHeader>
@@ -322,16 +329,16 @@ export const MultiGarageAdminPanel: React.FC = () => {
               </div>
 
               <div className="flex items-center justify-between pt-2 border-t">
-                <Badge variant={org.est_actif ? "default" : "secondary"}>
-                  {org.est_actif ? 'Actif' : 'Inactif'}
+                <Badge variant={org.is_active ? "default" : "secondary"}>
+                  {org.is_active ? 'Actif' : 'Inactif'}
                 </Badge>
                 <div className="flex gap-1">
                   <Button
                     size="sm"
                     variant="outline"
-                    onClick={() => toggleOrganisationStatus(org.id, org.est_actif)}
+                    onClick={() => toggleOrganisationStatus(org.id, org.is_active)}
                   >
-                    {org.est_actif ? 'Désactiver' : 'Activer'}
+                    {org.is_active ? 'Désactiver' : 'Activer'}
                   </Button>
                 </div>
               </div>
