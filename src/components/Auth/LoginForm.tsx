@@ -2,136 +2,101 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, Building, LogIn, Key } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Loader2, Mail, Lock } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
+import { useNavigate } from 'react-router-dom';
 
-interface Organisation {
-  id: string;
-  nom: string;
-  slug: string;
-  // code: string; // Temporairement désactivé
-}
-
-interface LoginFormProps {
-  organisations: Organisation[];
-}
-
-const LoginForm: React.FC<LoginFormProps> = ({ organisations }) => {
-  const [selectedOrg, setSelectedOrg] = useState('');
-  // const [orgCode, setOrgCode] = useState('');
-  const [loginData, setLoginData] = useState({ email: '', password: '' });
-  const [submitting, setSubmitting] = useState(false);
+const LoginForm: React.FC = () => {
+  const [formData, setFormData] = useState({
+    email: '',
+    password: ''
+  });
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const navigate = useNavigate();
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSubmitting(true);
+    setIsLoading(true);
     setError('');
 
     try {
-      if (!selectedOrg || !loginData.email || !loginData.password) {
-        throw new Error('Tous les champs sont requis');
-      }
-
-      const org = organisations.find(o => o.id === selectedOrg);
-      if (!org) {
-        throw new Error("Organisation non valide");
-      }
-      /* Temporairement désactivé
-      if (org.code !== orgCode) {
-        throw new Error('Code d\'organisation incorrect');
-      }
-      */
-
-      const { error: authError } = await supabase.auth.signInWithPassword({
-        email: loginData.email,
-        password: loginData.password,
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: formData.email,
+        password: formData.password,
       });
 
-      if (authError) throw new Error(authError.message);
+      if (error) {
+        throw error;
+      }
 
-      await supabase.functions.invoke('set-organisation-context', { body: { organisationId: selectedOrg } });
-      localStorage.setItem('selectedOrganisationSlug', org.slug);
-
-      toast.success('Connexion réussie ! Redirection...');
-      navigate('/dashboard');
-
-    } catch (e: any) {
-      setError(e.message || 'Une erreur est survenue.');
-      toast.error(e.message || 'Une erreur est survenue.');
+      if (data.user) {
+        toast.success('Connexion réussie !');
+        navigate('/dashboard');
+      }
+    } catch (error: any) {
+      setError(error.message || 'Erreur de connexion');
+      toast.error(error.message || 'Erreur de connexion');
     } finally {
-      setSubmitting(false);
+      setIsLoading(false);
     }
   };
 
   return (
-    <form onSubmit={handleLogin} className="space-y-4 animate-in fade-in">
-      <div className="space-y-2">
-        <Label htmlFor="organisation-login">Organisation</Label>
-        <Select value={selectedOrg} onValueChange={setSelectedOrg} required>
-          <SelectTrigger id="organisation-login">
-            <SelectValue placeholder="Sélectionnez votre organisation" />
-          </SelectTrigger>
-          <SelectContent>
-            {organisations.map(org => (
-              <SelectItem key={org.id} value={org.id}>
-                <div className="flex items-center space-x-2">
-                  <Building className="w-4 h-4 text-muted-foreground" />
-                  <span>{org.nom}</span>
-                </div>
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      {/*
-      <div className="space-y-2">
-        <Label htmlFor="org-code-login">Code de l'organisation</Label>
-        <Input
-          id="org-code-login"
-          type="password"
-          value={orgCode}
-          onChange={(e) => setOrgCode(e.target.value)}
-          placeholder="Code d'accès secret"
-          required
-        />
-      </div>
-      */}
+    <form onSubmit={handleSubmit} className="space-y-4">
+      {error && (
+        <Alert variant="destructive">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
 
       <div className="space-y-2">
-        <Label htmlFor="email-login">Email</Label>
-        <Input
-          id="email-login"
-          type="email"
-          value={loginData.email}
-          onChange={(e) => setLoginData({ ...loginData, email: e.target.value })}
-          placeholder="votre.email@exemple.com"
-          required
-        />
+        <Label htmlFor="email">Email</Label>
+        <div className="relative">
+          <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+          <Input
+            id="email"
+            type="email"
+            value={formData.email}
+            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+            className="pl-10"
+            placeholder="votre.email@example.com"
+            required
+          />
+        </div>
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="password-login">Mot de passe</Label>
-        <Input
-          id="password-login"
-          type="password"
-          value={loginData.password}
-          onChange={(e) => setLoginData({ ...loginData, password: e.target.value })}
-          placeholder="Votre mot de passe"
-          required
-        />
+        <Label htmlFor="password">Mot de passe</Label>
+        <div className="relative">
+          <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+          <Input
+            id="password"
+            type="password"
+            value={formData.password}
+            onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+            className="pl-10"
+            placeholder="Votre mot de passe"
+            required
+          />
+        </div>
       </div>
 
-      {error && <p className="text-sm text-red-500">{error}</p>}
-
-      <Button type="submit" className="w-full" disabled={submitting}>
-        {submitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <LogIn className="mr-2 h-4 w-4" />}
-        Se connecter
+      <Button
+        type="submit"
+        disabled={isLoading}
+        className="w-full"
+      >
+        {isLoading ? (
+          <>
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            Connexion...
+          </>
+        ) : (
+          'Se connecter'
+        )}
       </Button>
     </form>
   );

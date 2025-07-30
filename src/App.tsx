@@ -23,24 +23,13 @@ import Aide from '@/pages/Aide';
 import NotFound from '@/pages/NotFound';
 import ThirdPartyDemo from '@/pages/ThirdPartyDemo';
 
-// Security Components
-import OrganisationGuard from '@/components/OrganisationGuard';
-import CreateOrganisationForm from '@/components/CreateOrganisationForm';
+// Components
+import SimpleAuthGuard from '@/components/SimpleAuthGuard';
 import UnifiedSplashScreen from '@/components/UnifiedSplashScreen';
-import AuthStatusDebug from '@/components/AuthStatusDebug';
 import ErrorBoundary from '@/components/ErrorBoundary';
-import AdminOnboardingModal from '@/components/AdminOnboardingModal';
-import { OrganisationOnboarding } from '@/components/OrganisationOnboarding';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { supabase } from '@/integrations/supabase/client';
 
 // Layout
 import UnifiedLayout from '@/layout/UnifiedLayout';
-
-// Legacy Components (pour compatibilité)
-import PrivateRoute from '@/routes/PrivateRoute';
-import AuthRedirect from '@/routes/AuthRedirect';
-import { OrganisationProvider } from '@/components/OrganisationProvider';
 
 // Créer une instance QueryClient
 const queryClient = new QueryClient({
@@ -55,107 +44,10 @@ const queryClient = new QueryClient({
 // Composant principal de contenu de l'app
 const AppContent = () => {
   const [showSplash, setShowSplash] = useState(true);
-  const [checking, setChecking] = useState(true);
-  const [showAdminModal, setShowAdminModal] = useState(false);
-  const [showOrgOnboarding, setShowOrgOnboarding] = useState(false);
-  const [showPlanSelector, setShowPlanSelector] = useState(false);
-  const [selectedPlan, setSelectedPlan] = useState('starter');
-  const [adminCompleted, setAdminCompleted] = useState(false);
-  const [orgCompleted, setOrgCompleted] = useState(false);
-
-  // Vérification initiale Super-Admin et Organisation
-  React.useEffect(() => {
-    const checkInitialState = async () => {
-      // Vérifier Super-Admin
-      const { data: superAdmins, error: superAdminError } = await supabase
-        .from('super_admins')
-        .select('id')
-        .limit(1);
-      if (superAdminError) {
-        setChecking(false);
-        return;
-      }
-      if (!superAdmins || superAdmins.length === 0) {
-        setShowAdminModal(true);
-        setChecking(false);
-        return;
-      }
-      // Vérifier Organisation
-      const { data: orgs, error: orgError } = await supabase
-        .from('organisations')
-        .select('id')
-        .limit(1);
-      if (orgError) {
-        setChecking(false);
-        return;
-      }
-      if (!orgs || orgs.length === 0) {
-        setShowPlanSelector(true);
-        setChecking(false);
-        return;
-      }
-      setChecking(false);
-    };
-    checkInitialState();
-  }, [adminCompleted, orgCompleted]);
-
-  const handleAdminComplete = () => {
-    setShowAdminModal(false);
-    setAdminCompleted(true);
-  };
-  const handleOrgComplete = () => {
-    setShowOrgOnboarding(false);
-    setOrgCompleted(true);
-  };
-  const handlePlanSelect = (plan: string) => {
-    setSelectedPlan(plan);
-    setShowPlanSelector(false);
-    setShowOrgOnboarding(true);
-  };
 
   // Splash screen
   if (showSplash) {
     return <UnifiedSplashScreen onComplete={() => setShowSplash(false)} />;
-  }
-  // Blocage UI si vérification en cours
-  if (checking) {
-    return <div className="min-h-screen flex items-center justify-center">Vérification initiale...</div>;
-  }
-  // Modal Super-Admin bloquante
-  if (showAdminModal) {
-    return <AdminOnboardingModal isOpen={true} onComplete={handleAdminComplete} />;
-  }
-  // Sélecteur de plan si aucune organisation
-  if (showPlanSelector) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
-        <div className="bg-white rounded-xl shadow-lg p-8 max-w-md w-full">
-          <h2 className="text-2xl font-bold mb-4 text-center">Choisissez un plan d'abonnement</h2>
-          <Select value={selectedPlan} onValueChange={setSelectedPlan}>
-            <SelectTrigger>
-              <SelectValue placeholder="Choisir un plan" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="starter">Gratuit (5 utilisateurs)</SelectItem>
-              <SelectItem value="pro">Mensuel (20 utilisateurs)</SelectItem>
-              <SelectItem value="enterprise">À VIE (illimité)</SelectItem>
-            </SelectContent>
-          </Select>
-          <button
-            className="mt-6 w-full bg-blue-600 text-white py-3 rounded-lg font-bold hover:bg-blue-700 transition"
-            onClick={() => handlePlanSelect(selectedPlan)}
-          >
-            Commencer
-          </button>
-        </div>
-      </div>
-    );
-  }
-  // Modal Onboarding Organisation
-  if (showOrgOnboarding) {
-    return (
-      <OrganisationOnboarding isOpen={true} onComplete={handleOrgComplete} plan={selectedPlan} />
-    );
   }
 
   return (
@@ -165,107 +57,97 @@ const AppContent = () => {
       <Route path="/a-propos" element={<APropos />} />
       <Route path="/aide" element={<Aide />} />
 
-      {/* =================== AUTHENTIFICATION SÉCURISÉE =================== */}
-      <Route path="/create-organisation" element={<CreateOrganisationForm />} />
-
-      {/* =================== ROUTES LEGACY (pour compatibilité) =================== */}
+      {/* =================== AUTHENTIFICATION =================== */}
       <Route path="/auth" element={
-        <AuthRedirect>
+        <SimpleAuthGuard requireAuth={false}>
           <Auth />
-        </AuthRedirect>
+        </SimpleAuthGuard>
       } />
       <Route path="/connexion" element={
-        <AuthRedirect>
+        <SimpleAuthGuard requireAuth={false}>
           <Connexion />
-        </AuthRedirect>
+        </SimpleAuthGuard>
       } />
 
-      {/* =================== ROUTES PROTÉGÉES (avec OrganisationGuard) =================== */}
+      {/* =================== ROUTES PROTÉGÉES =================== */}
       <Route path="/dashboard" element={
-        <OrganisationGuard>
+        <SimpleAuthGuard>
           <UnifiedLayout>
             <Dashboard />
           </UnifiedLayout>
-        </OrganisationGuard>
+        </SimpleAuthGuard>
       } />
 
       <Route path="/clients/liste" element={
-        <OrganisationGuard>
+        <SimpleAuthGuard>
           <UnifiedLayout>
             <ClientsListe />
           </UnifiedLayout>
-        </OrganisationGuard>
+        </SimpleAuthGuard>
       } />
 
       <Route path="/clients/ajouter" element={
-        <OrganisationGuard>
+        <SimpleAuthGuard>
           <UnifiedLayout>
             <ClientsAjouter />
           </UnifiedLayout>
-        </OrganisationGuard>
+        </SimpleAuthGuard>
       } />
 
       <Route path="/clients/historique" element={
-        <OrganisationGuard>
+        <SimpleAuthGuard>
           <UnifiedLayout>
             <ClientsHistorique />
           </UnifiedLayout>
-        </OrganisationGuard>
+        </SimpleAuthGuard>
       } />
 
       <Route path="/vehicules" element={
-        <OrganisationGuard>
+        <SimpleAuthGuard>
           <UnifiedLayout>
             <Vehicules />
           </UnifiedLayout>
-        </OrganisationGuard>
+        </SimpleAuthGuard>
       } />
 
       <Route path="/reparations" element={
-        <OrganisationGuard>
+        <SimpleAuthGuard>
           <UnifiedLayout>
             <Reparations />
           </UnifiedLayout>
-        </OrganisationGuard>
+        </SimpleAuthGuard>
       } />
 
       <Route path="/stock" element={
-        <OrganisationGuard>
+        <SimpleAuthGuard>
           <UnifiedLayout>
             <Stock />
           </UnifiedLayout>
-        </OrganisationGuard>
+        </SimpleAuthGuard>
       } />
 
       <Route path="/settings" element={
-        <OrganisationGuard>
+        <SimpleAuthGuard>
           <UnifiedLayout>
             <Settings />
           </UnifiedLayout>
-        </OrganisationGuard>
+        </SimpleAuthGuard>
       } />
 
       <Route path="/profil" element={
-        <OrganisationGuard>
+        <SimpleAuthGuard>
           <UnifiedLayout>
             <Profil />
           </UnifiedLayout>
-        </OrganisationGuard>
+        </SimpleAuthGuard>
       } />
 
       <Route path="/third-party-demo" element={
-        <OrganisationGuard>
+        <SimpleAuthGuard>
           <UnifiedLayout>
             <ThirdPartyDemo />
           </UnifiedLayout>
-        </OrganisationGuard>
-      } />
-
-      {/* =================== ROUTE DE DEBUG =================== */}
-      <Route path="/debug" element={
-        <UnifiedLayout>
-          <AuthStatusDebug />
-        </UnifiedLayout>
+        </SimpleAuthGuard>
       } />
 
       {/* =================== PAGE 404 =================== */}
@@ -274,12 +156,8 @@ const AppContent = () => {
   );
 };
 
-// Composant wrapper avec OrganisationProvider
-const AppContentWithOrg = () => (
-  <OrganisationProvider>
-    <AppContent />
-  </OrganisationProvider>
-);
+// Content without complex providers for now
+const AppContentSimple = () => <AppContent />;
 
 // Composant principal App
 const App: React.FC = () => {
@@ -289,7 +167,7 @@ const App: React.FC = () => {
         <ThemeProvider>
           <QueryClientProvider client={queryClient}>
             <TooltipProvider>
-              <AppContentWithOrg />
+              <AppContentSimple />
               <Toaster />
             </TooltipProvider>
           </QueryClientProvider>
