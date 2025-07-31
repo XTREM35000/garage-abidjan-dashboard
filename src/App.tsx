@@ -25,7 +25,7 @@ import ThirdPartyDemo from '@/pages/ThirdPartyDemo';
 
 // Components
 import SimpleAuthGuard from '@/components/SimpleAuthGuard';
-import UnifiedSplashScreen from '@/components/UnifiedSplashScreen';
+import SplashScreen from '@/components/SplashScreen';
 import ErrorBoundary from '@/components/ErrorBoundary';
 
 // Layout
@@ -47,7 +47,7 @@ const AppContent = () => {
 
   // Splash screen
   if (showSplash) {
-    return <UnifiedSplashScreen onComplete={() => setShowSplash(false)} />;
+    return <SplashScreen onComplete={() => setShowSplash(false)} />;
   }
 
   return (

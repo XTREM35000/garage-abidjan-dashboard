@@ -1,14 +1,12 @@
 import React from 'react';
 import { Car, Wrench, Zap, User, LogOut, Settings, Bell } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useAuth } from '@/hooks/useAuth';
-import { useOrganisation } from '@/components/OrganisationProvider';
+import { useSimpleAuth } from '@/hooks/useSimpleAuth';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 
 const Header: React.FC = () => {
-  const { user, profile, signOut, role } = useAuth();
-  const { currentOrg } = useOrganisation();
+  const { user, signOut } = useSimpleAuth();
   const navigate = useNavigate();
 
   const handleSignOut = async () => {
@@ -64,16 +62,12 @@ const Header: React.FC = () => {
         {/* Titre et sous-titre */}
         <div className="flex flex-col">
           <h1 className="text-2xl font-bold tracking-tight text-white drop-shadow-lg">
-            {currentOrg?.nom || 'Garage Pro'}
+            Garage Multi 2025
           </h1>
           <div className="flex items-center space-x-2">
             <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
             <p className="text-sm text-white/90 font-medium">
-              {currentOrg?.slug ? `ID: ${currentOrg.slug}` : 'Système de gestion'}
-            </p>
-            <span className="text-xs text-white/70">•</span>
-            <p className="text-xs text-white/70">
-              {getRoleLabel(role)}
+              Système de gestion
             </p>
           </div>
         </div>
@@ -106,11 +100,8 @@ const Header: React.FC = () => {
         {/* Menu utilisateur */}
         <div className="flex items-center space-x-2">
           <div className="flex items-center space-x-2 bg-white/10 backdrop-blur-sm rounded-lg px-3 py-2 border border-white/20">
-            <div className={`w-3 h-3 rounded-full ${getRoleColor(role)}`} />
+            <div className="w-3 h-3 rounded-full bg-green-500" />
             <div className="flex flex-col">
-              <span className="text-xs text-white font-medium">
-                {profile?.prenom} {profile?.nom}
-              </span>
               <span className="text-xs text-white/70">
                 {user?.email}
               </span>

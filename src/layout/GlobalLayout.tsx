@@ -2,8 +2,7 @@ import React from 'react';
 import { useLocation } from 'react-router-dom';
 import UnifiedHeader from '@/components/UnifiedHeader';
 import UnifiedFooter from '@/components/UnifiedFooter';
-import { useAuth } from '@/hooks/useAuth';
-import { useOrganisation } from '@/components/OrganisationProvider';
+import { useSimpleAuth } from '@/hooks/useSimpleAuth';
 
 interface GlobalLayoutProps {
   children: React.ReactNode;
@@ -17,8 +16,7 @@ const GlobalLayout: React.FC<GlobalLayoutProps> = ({
   showFooter = true
 }) => {
   const location = useLocation();
-  const { isAuthenticated } = useAuth();
-  const { currentOrg } = useOrganisation();
+  const { isAuthenticated } = useSimpleAuth();
 
   // Pages qui ne doivent pas avoir le header/footer
   const excludedPages = [

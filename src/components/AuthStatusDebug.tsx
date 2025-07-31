@@ -2,27 +2,11 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { useAuth } from '@/hooks/useAuth';
-import { useOrganisation } from '@/components/OrganisationProvider';
+import { useSimpleAuth } from '@/hooks/useSimpleAuth';
 import { Shield, User, Building, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
 
 const AuthStatusDebug: React.FC = () => {
-  const {
-    user,
-    profile,
-    isAuthenticated,
-    hasOrganisation,
-    isLoading,
-    role,
-    organisation_id
-  } = useAuth();
-
-  const {
-    currentOrg,
-    organisations,
-    isLoading: orgLoading,
-    needsOnboarding
-  } = useOrganisation();
+  const { user, isAuthenticated, isLoading } = useSimpleAuth();
 
   const getStatusIcon = (status: boolean) => {
     return status ? (
@@ -68,8 +52,8 @@ const AuthStatusDebug: React.FC = () => {
                   <span className="font-mono text-xs">{user?.email || 'Non défini'}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span>Rôle:</span>
-                  <Badge variant="outline">{role}</Badge>
+                  <span>Créé le:</span>
+                  <span className="text-xs">{user?.created_at ? new Date(user.created_at).toLocaleDateString() : 'Non défini'}</span>
                 </div>
               </div>
             </div>
@@ -78,16 +62,12 @@ const AuthStatusDebug: React.FC = () => {
               <h4 className="font-medium">Profil</h4>
               <div className="space-y-1 text-sm">
                 <div className="flex justify-between">
-                  <span>Nom:</span>
-                  <span>{profile?.prenom} {profile?.nom}</span>
+                  <span>ID:</span>
+                  <span className="font-mono text-xs">{user?.id || 'Non défini'}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span>Organisation ID:</span>
-                  <span className="font-mono text-xs">{organisation_id || 'Non défini'}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>A une organisation:</span>
-                  {getStatusBadge(hasOrganisation, hasOrganisation ? 'Oui' : 'Non')}
+                  <span>Status:</span>
+                  {getStatusBadge(isAuthenticated, 'Connecté')}
                 </div>
               </div>
             </div>
@@ -95,53 +75,6 @@ const AuthStatusDebug: React.FC = () => {
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Building className="w-5 h-5" />
-            État de l'organisation
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <h4 className="font-medium">Organisation actuelle</h4>
-              <div className="space-y-1 text-sm">
-                <div className="flex justify-between">
-                  <span>Chargement:</span>
-                  {getStatusBadge(!orgLoading, orgLoading ? 'En cours' : 'Terminé')}
-                </div>
-                <div className="flex justify-between">
-                  <span>Nom:</span>
-                  <span>{currentOrg?.nom || 'Non défini'}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Slug:</span>
-                  <span className="font-mono text-xs">{currentOrg?.slug || 'Non défini'}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Plan:</span>
-                  <Badge variant="outline">{currentOrg?.plan_abonnement || 'Non défini'}</Badge>
-                </div>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <h4 className="font-medium">Système</h4>
-              <div className="space-y-1 text-sm">
-                <div className="flex justify-between">
-                  <span>Organisations totales:</span>
-                  <span>{organisations.length}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Besoin onboarding:</span>
-                  {getStatusBadge(!needsOnboarding, needsOnboarding ? 'Oui' : 'Non')}
-                </div>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
 
       <Card>
         <CardHeader>
@@ -156,8 +89,7 @@ const AuthStatusDebug: React.FC = () => {
               variant="outline"
               size="sm"
               onClick={() => {
-                console.log('Auth State:', { user, profile, isAuthenticated, hasOrganisation, role });
-                console.log('Org State:', { currentOrg, organisations, needsOnboarding });
+                console.log('Auth State:', { user, isAuthenticated, isLoading });
               }}
             >
               Log State
