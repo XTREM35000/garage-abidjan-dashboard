@@ -45,7 +45,7 @@ const PricingModal: React.FC<PricingModalProps> = ({
       id: 'free',
       name: 'Gratuit',
       price: '0',
-      period: 'À vie',
+      period: 'une semaine',
       description: 'Parfait pour commencer avec votre garage',
       icon: Star,
       color: 'text-green-600',
@@ -83,7 +83,7 @@ const PricingModal: React.FC<PricingModalProps> = ({
     {
       id: 'lifetime',
       name: 'À VIE',
-      price: '500 000',
+      price: '200 000',
       period: 'une fois',
       description: 'Investissement unique pour votre succès',
       icon: Crown,

@@ -189,7 +189,10 @@ const SuperAdminSetupModal: React.FC<SuperAdminSetupModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={() => {}}>
-      <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900 dark:to-green-800 border-green-200 dark:border-green-700">
+      <DialogContent
+        className="sm:max-w-md max-h-[90vh] overflow-y-auto bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900 dark:to-green-800 border-green-200 dark:border-green-700"
+        aria-describedby="super-admin-description"
+      >
         <DialogHeader className="text-center">
           <div className="mx-auto mb-4 w-16 h-16 bg-gradient-to-r from-green-500 to-emerald-600 rounded-full flex items-center justify-center animate-pulse">
             <Crown className="w-8 h-8 text-white" />
@@ -197,7 +200,7 @@ const SuperAdminSetupModal: React.FC<SuperAdminSetupModalProps> = ({
           <DialogTitle className="text-2xl font-bold text-green-800 dark:text-green-200">
             Configuration Super-Admin
           </DialogTitle>
-          <p className="text-green-600 dark:text-green-300 mt-2">
+          <p id="super-admin-description" className="text-green-600 dark:text-green-300 mt-2">
             Créez le compte administrateur principal pour gérer toutes les organisations
           </p>
         </DialogHeader>
