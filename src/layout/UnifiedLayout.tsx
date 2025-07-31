@@ -1,9 +1,8 @@
 import React from 'react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
-import Navbar from '@/components/Navbar';
-import { useAuth } from '@/hooks/useAuth';
-import { useOrganisation } from '@/components/OrganisationProvider';
+
+import { useSimpleAuth } from '@/hooks/useSimpleAuth';
 
 interface UnifiedLayoutProps {
   children: React.ReactNode;
@@ -18,8 +17,7 @@ const UnifiedLayout: React.FC<UnifiedLayoutProps> = ({
   showFooter = true,
   showNavbar = true
 }) => {
-  const { isAuthenticated } = useAuth();
-  const { currentOrg } = useOrganisation();
+  const { isAuthenticated } = useSimpleAuth();
 
   // Ne pas afficher le header/footer sur les pages d'auth
   const isAuthPage = window.location.pathname.includes('/auth') ||
@@ -33,7 +31,7 @@ const UnifiedLayout: React.FC<UnifiedLayoutProps> = ({
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       {showHeader && isAuthenticated && <Header />}
-      {showNavbar && isAuthenticated && <Navbar />}
+      
 
       <main className="flex-1 p-6">
         <div className="max-w-7xl mx-auto">

@@ -25,8 +25,8 @@ import ThirdPartyDemo from '@/pages/ThirdPartyDemo';
 
 // Components
 import SimpleAuthGuard from '@/components/SimpleAuthGuard';
-import UnifiedSplashScreen from '@/components/UnifiedSplashScreen';
 import ErrorBoundary from '@/components/ErrorBoundary';
+import MultiInstanceSetup from '@/components/MultiInstanceSetup';
 
 // Layout
 import UnifiedLayout from '@/layout/UnifiedLayout';
@@ -44,11 +44,15 @@ const queryClient = new QueryClient({
 
 // Composant principal de contenu de l'app
 const AppContent = () => {
-  const [showSplash, setShowSplash] = useState(true);
+  const [setupComplete, setSetupComplete] = useState(false);
 
-  // Splash screen
-  if (showSplash) {
-    return <UnifiedSplashScreen onComplete={() => setShowSplash(false)} />;
+  // Workflow multi-instance
+  if (!setupComplete) {
+    return (
+      <MultiInstanceSetup onComplete={() => setSetupComplete(true)}>
+        <></>
+      </MultiInstanceSetup>
+    );
   }
 
   return (
