@@ -52,7 +52,7 @@ export const OrganisationOnboarding: React.FC<Props> = ({ isOpen, onComplete, pl
         description: `Bienvenue dans ${formData.nom} !`
       });
 
-      onComplete(data.org_id);
+      onComplete(data.organisation_id || data.org_id);
     } catch (error: any) {
       toast({
         title: "Erreur lors de la création",

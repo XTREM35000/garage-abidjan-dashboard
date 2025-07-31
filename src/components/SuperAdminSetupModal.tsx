@@ -1,23 +1,12 @@
 import React, { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Badge } from '@/components/ui/badge';
 import {
-  User,
-  Mail,
-  Phone,
-  Shield,
-  CheckCircle,
-  AlertCircle,
-  Eye,
-  EyeOff,
-  Crown,
-  Lock,
-  Sparkles
+  User, Mail, Phone, Shield, AlertCircle, Eye, EyeOff, Crown, Lock, Sparkles
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -27,10 +16,7 @@ interface SuperAdminSetupModalProps {
   onComplete: (adminData: any) => void;
 }
 
-const SuperAdminSetupModal: React.FC<SuperAdminSetupModalProps> = ({
-  isOpen,
-  onComplete
-}) => {
+const SuperAdminSetupModal: React.FC<SuperAdminSetupModalProps> = ({ isOpen, onComplete }) => {
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -39,6 +25,7 @@ const SuperAdminSetupModal: React.FC<SuperAdminSetupModalProps> = ({
     nom: '',
     prenom: ''
   });
+
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -47,39 +34,30 @@ const SuperAdminSetupModal: React.FC<SuperAdminSetupModalProps> = ({
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
 
-    // Validation email
     if (!formData.email) {
-      newErrors.email = 'L\'email est requis';
+      newErrors.email = 'Email requis';
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = 'Format d\'email invalide';
+      newErrors.email = 'Format email invalide';
     }
 
-    // Validation mot de passe
     if (!formData.password) {
-      newErrors.password = 'Le mot de passe est requis';
+      newErrors.password = 'Mot de passe requis';
     } else if (formData.password.length < 8) {
-      newErrors.password = 'Le mot de passe doit contenir au moins 8 caractères';
+      newErrors.password = 'Minimum 8 caractères';
     }
 
-    // Validation confirmation mot de passe
     if (formData.password !== formData.confirmPassword) {
-      newErrors.confirmPassword = 'Les mots de passe ne correspondent pas';
+      newErrors.confirmPassword = 'Mots de passe différents';
     }
 
-    // Validation téléphone (format CI)
     if (!formData.phone) {
-      newErrors.phone = 'Le numéro de téléphone est requis';
+      newErrors.phone = 'Téléphone requis';
     } else if (!/^\+225\s?\d{2}\s?\d{2}\s?\d{2}\s?\d{2}\s?\d{2}$/.test(formData.phone.replace(/\s/g, ''))) {
       newErrors.phone = 'Format: +225 XX XX XX XX XX';
     }
 
-    // Validation nom et prénom
-    if (!formData.nom) {
-      newErrors.nom = 'Le nom est requis';
-    }
-    if (!formData.prenom) {
-      newErrors.prenom = 'Le prénom est requis';
-    }
+    if (!formData.nom) newErrors.nom = 'Nom requis';
+    if (!formData.prenom) newErrors.prenom = 'Prénom requis';
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -97,25 +75,18 @@ const SuperAdminSetupModal: React.FC<SuperAdminSetupModalProps> = ({
   };
 
   const handleInputChange = (field: string, value: string) => {
-    if (field === 'phone') {
-      value = formatPhoneNumber(value);
-    }
+    if (field === 'phone') value = formatPhoneNumber(value);
     setFormData(prev => ({ ...prev, [field]: value }));
-    // Effacer l'erreur du champ modifié
-    if (errors[field]) {
-      setErrors(prev => ({ ...prev, [field]: '' }));
-    }
+    if (errors[field]) setErrors(prev => ({ ...prev, [field]: '' }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
     if (!validateForm()) return;
 
     setIsLoading(true);
 
     try {
-      // Créer le compte Super-Admin dans Supabase Auth
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
@@ -129,43 +100,27 @@ const SuperAdminSetupModal: React.FC<SuperAdminSetupModalProps> = ({
         }
       });
 
-      if (authError) {
-        throw authError;
-      }
+      if (authError) throw authError;
 
       if (authData.user) {
-        // Créer l'entrée dans la table super_admins
-        const { error: superAdminError } = await supabase
-          .from('super_admins')
-          .insert({
-            user_id: authData.user.id,
-            email: formData.email,
-            nom: formData.nom,
-            prenom: formData.prenom,
-            phone: formData.phone,
-            est_actif: true
-          });
+        await supabase.from('super_admins').insert({
+          user_id: authData.user.id,
+          email: formData.email,
+          nom: formData.nom,
+          prenom: formData.prenom,
+          phone: formData.phone,
+          est_actif: true
+        });
 
-        if (superAdminError) {
-          throw superAdminError;
-        }
-
-        // Créer l'entrée dans la table users
-        const { error: userError } = await supabase
-          .from('users')
-          .insert({
-            id: authData.user.id,
-            email: formData.email,
-            nom: formData.nom,
-            prenom: formData.prenom,
-            phone: formData.phone,
-            role: 'superadmin',
-            est_actif: true
-          });
-
-        if (userError) {
-          throw userError;
-        }
+        await supabase.from('users').insert({
+          id: authData.user.id,
+          email: formData.email,
+          nom: formData.nom,
+          prenom: formData.prenom,
+          phone: formData.phone,
+          role: 'superadmin',
+          est_actif: true
+        });
 
         toast.success('Super-Admin créé avec succès !');
         onComplete({
@@ -180,8 +135,8 @@ const SuperAdminSetupModal: React.FC<SuperAdminSetupModalProps> = ({
         });
       }
     } catch (error: any) {
-      console.error('Erreur lors de la création du Super-Admin:', error);
-      toast.error(error.message || 'Erreur lors de la création du Super-Admin');
+      console.error('Erreur création Super-Admin:', error);
+      toast.error(error.message || 'Erreur création Super-Admin');
     } finally {
       setIsLoading(false);
     }
@@ -189,10 +144,7 @@ const SuperAdminSetupModal: React.FC<SuperAdminSetupModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={() => {}}>
-      <DialogContent
-        className="sm:max-w-md max-h-[90vh] overflow-y-auto bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900 dark:to-green-800 border-green-200 dark:border-green-700"
-        aria-describedby="super-admin-description"
-      >
+      <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900 dark:to-green-800 border-green-200 dark:border-green-700">
         <DialogHeader className="text-center">
           <div className="mx-auto mb-4 w-16 h-16 bg-gradient-to-r from-green-500 to-emerald-600 rounded-full flex items-center justify-center animate-pulse">
             <Crown className="w-8 h-8 text-white" />
@@ -200,9 +152,9 @@ const SuperAdminSetupModal: React.FC<SuperAdminSetupModalProps> = ({
           <DialogTitle className="text-2xl font-bold text-green-800 dark:text-green-200">
             Configuration Super-Admin
           </DialogTitle>
-          <p id="super-admin-description" className="text-green-600 dark:text-green-300 mt-2">
-            Créez le compte administrateur principal pour gérer toutes les organisations
-          </p>
+          <DialogDescription className="text-green-600 dark:text-green-300 mt-2">
+            Créez le compte administrateur principal
+          </DialogDescription>
         </DialogHeader>
 
         <Card className="border-green-200 dark:border-green-700 bg-white/50 dark:bg-green-900/50 backdrop-blur-sm">
@@ -214,7 +166,6 @@ const SuperAdminSetupModal: React.FC<SuperAdminSetupModalProps> = ({
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
-              {/* Nom et Prénom */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="prenom" className="text-green-700 dark:text-green-300">
@@ -224,18 +175,13 @@ const SuperAdminSetupModal: React.FC<SuperAdminSetupModalProps> = ({
                     <User className="absolute left-3 top-3 h-4 w-4 text-green-500" />
                     <Input
                       id="prenom"
-                      type="text"
                       value={formData.prenom}
                       onChange={(e) => handleInputChange('prenom', e.target.value)}
-                      className={`pl-10 border-green-300 dark:border-green-600 focus:border-green-500 dark:focus:border-green-400 ${
-                        errors.prenom ? 'border-red-500' : ''
-                      }`}
+                      className={`pl-10 ${errors.prenom ? 'border-red-500' : ''}`}
                       placeholder="Votre prénom"
                     />
                   </div>
-                  {errors.prenom && (
-                    <p className="text-red-500 text-sm">{errors.prenom}</p>
-                  )}
+                  {errors.prenom && <p className="text-red-500 text-sm">{errors.prenom}</p>}
                 </div>
 
                 <div className="space-y-2">
@@ -246,22 +192,16 @@ const SuperAdminSetupModal: React.FC<SuperAdminSetupModalProps> = ({
                     <User className="absolute left-3 top-3 h-4 w-4 text-green-500" />
                     <Input
                       id="nom"
-                      type="text"
                       value={formData.nom}
                       onChange={(e) => handleInputChange('nom', e.target.value)}
-                      className={`pl-10 border-green-300 dark:border-green-600 focus:border-green-500 dark:focus:border-green-400 ${
-                        errors.nom ? 'border-red-500' : ''
-                      }`}
+                      className={`pl-10 ${errors.nom ? 'border-red-500' : ''}`}
                       placeholder="Votre nom"
                     />
                   </div>
-                  {errors.nom && (
-                    <p className="text-red-500 text-sm">{errors.nom}</p>
-                  )}
+                  {errors.nom && <p className="text-red-500 text-sm">{errors.nom}</p>}
                 </div>
               </div>
 
-              {/* Email */}
               <div className="space-y-2">
                 <Label htmlFor="email" className="text-green-700 dark:text-green-300">
                   Email *
@@ -273,18 +213,13 @@ const SuperAdminSetupModal: React.FC<SuperAdminSetupModalProps> = ({
                     type="email"
                     value={formData.email}
                     onChange={(e) => handleInputChange('email', e.target.value)}
-                    className={`pl-10 border-green-300 dark:border-green-600 focus:border-green-500 dark:focus:border-green-400 ${
-                      errors.email ? 'border-red-500' : ''
-                    }`}
+                    className={`pl-10 ${errors.email ? 'border-red-500' : ''}`}
                     placeholder="votre@email.com"
                   />
                 </div>
-                {errors.email && (
-                  <p className="text-red-500 text-sm">{errors.email}</p>
-                )}
+                {errors.email && <p className="text-red-500 text-sm">{errors.email}</p>}
               </div>
 
-              {/* Téléphone */}
               <div className="space-y-2">
                 <Label htmlFor="phone" className="text-green-700 dark:text-green-300">
                   Téléphone *
@@ -296,18 +231,13 @@ const SuperAdminSetupModal: React.FC<SuperAdminSetupModalProps> = ({
                     type="tel"
                     value={formData.phone}
                     onChange={(e) => handleInputChange('phone', e.target.value)}
-                    className={`pl-10 border-green-300 dark:border-green-600 focus:border-green-500 dark:focus:border-green-400 ${
-                      errors.phone ? 'border-red-500' : ''
-                    }`}
+                    className={`pl-10 ${errors.phone ? 'border-red-500' : ''}`}
                     placeholder="+225 XX XX XX XX XX"
                   />
                 </div>
-                {errors.phone && (
-                  <p className="text-red-500 text-sm">{errors.phone}</p>
-                )}
+                {errors.phone && <p className="text-red-500 text-sm">{errors.phone}</p>}
               </div>
 
-              {/* Mot de passe */}
               <div className="space-y-2">
                 <Label htmlFor="password" className="text-green-700 dark:text-green-300">
                   Mot de passe *
@@ -319,9 +249,7 @@ const SuperAdminSetupModal: React.FC<SuperAdminSetupModalProps> = ({
                     type={showPassword ? 'text' : 'password'}
                     value={formData.password}
                     onChange={(e) => handleInputChange('password', e.target.value)}
-                    className={`pl-10 pr-10 border-green-300 dark:border-green-600 focus:border-green-500 dark:focus:border-green-400 ${
-                      errors.password ? 'border-red-500' : ''
-                    }`}
+                    className={`pl-10 pr-10 ${errors.password ? 'border-red-500' : ''}`}
                     placeholder="••••••••"
                   />
                   <Button
@@ -338,15 +266,12 @@ const SuperAdminSetupModal: React.FC<SuperAdminSetupModalProps> = ({
                     )}
                   </Button>
                 </div>
-                {errors.password && (
-                  <p className="text-red-500 text-sm">{errors.password}</p>
-                )}
+                {errors.password && <p className="text-red-500 text-sm">{errors.password}</p>}
               </div>
 
-              {/* Confirmation mot de passe */}
               <div className="space-y-2">
                 <Label htmlFor="confirmPassword" className="text-green-700 dark:text-green-300">
-                  Confirmer le mot de passe *
+                  Confirmer mot de passe *
                 </Label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-3 h-4 w-4 text-green-500" />
@@ -355,9 +280,7 @@ const SuperAdminSetupModal: React.FC<SuperAdminSetupModalProps> = ({
                     type={showConfirmPassword ? 'text' : 'password'}
                     value={formData.confirmPassword}
                     onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
-                    className={`pl-10 pr-10 border-green-300 dark:border-green-600 focus:border-green-500 dark:focus:border-green-400 ${
-                      errors.confirmPassword ? 'border-red-500' : ''
-                    }`}
+                    className={`pl-10 pr-10 ${errors.confirmPassword ? 'border-red-500' : ''}`}
                     placeholder="••••••••"
                   />
                   <Button
@@ -374,24 +297,20 @@ const SuperAdminSetupModal: React.FC<SuperAdminSetupModalProps> = ({
                     )}
                   </Button>
                 </div>
-                {errors.confirmPassword && (
-                  <p className="text-red-500 text-sm">{errors.confirmPassword}</p>
-                )}
+                {errors.confirmPassword && <p className="text-red-500 text-sm">{errors.confirmPassword}</p>}
               </div>
 
-              {/* Alert d'information */}
               <Alert className="border-green-200 bg-green-50 dark:bg-green-900/20 dark:border-green-700">
                 <AlertCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
                 <AlertDescription className="text-green-700 dark:text-green-300">
-                  Ce compte aura accès à toutes les organisations et pourra créer de nouveaux administrateurs.
+                  Accès complet à toutes les organisations
                 </AlertDescription>
               </Alert>
 
-              {/* Bouton de soumission */}
               <Button
                 type="submit"
                 disabled={isLoading}
-                className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-semibold py-3 rounded-lg transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-semibold py-3 rounded-lg transition-all duration-300 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isLoading ? (
                   <div className="flex items-center gap-2">
