@@ -27,7 +27,7 @@ import ThirdPartyDemo from '@/pages/ThirdPartyDemo';
 // Components
 import SimpleAuthGuard from '@/components/SimpleAuthGuard';
 import ErrorBoundary from '@/components/ErrorBoundary';
-import SimpleSetup from '@/components/SimpleSetup';
+import WorkflowGuard from '@/components/WorkflowGuard';
 
 // Layout
 import AppLayout from '@/layout/AppLayout';
@@ -118,20 +118,10 @@ const AutoReconnect: React.FC<{ children: React.ReactNode }> = ({ children }) =>
 
 // Composant principal de contenu de l'app
 const AppContent = () => {
-  const [setupComplete, setSetupComplete] = useState(false);
-
-  // Workflow de setup simplifié
-  if (!setupComplete) {
-    return (
-      <SimpleSetup onComplete={() => setSetupComplete(true)}>
-        <></>
-      </SimpleSetup>
-    );
-  }
-
   return (
-    <AutoReconnect>
-      <Routes>
+    <WorkflowGuard>
+      <AutoReconnect>
+        <Routes>
         {/* =================== PAGES PUBLIQUES (sans layout) =================== */}
         <Route path="/" element={<Index />} />
         <Route path="/a-propos" element={<APropos />} />
@@ -212,8 +202,9 @@ const AppContent = () => {
 
         {/* =================== PAGE 404 =================== */}
         <Route path="*" element={<NotFound />} />
-      </Routes>
-    </AutoReconnect>
+        </Routes>
+      </AutoReconnect>
+    </WorkflowGuard>
   );
 };
 
