@@ -34,25 +34,26 @@ const WorkflowGuard: React.FC<WorkflowGuardProps> = ({ children }) => {
       
       // 1. Vérifier si Super-Admin existe
       console.log('🔍 Vérification Super-Admin...');
-      const { data: superAdmins, error: superAdminError } = await supabase
+      const { count: superAdminCount, error: superAdminError } = await supabase
         .from('super_admins')
-        .select('id, is_active, email')
-        .eq('is_active', true)
-        .limit(1);
+        .select('*', { count: 'exact', head: true });
 
       if (superAdminError) {
         console.error('❌ Erreur Super-Admin:', superAdminError);
-        // Si la table n'existe pas ou autre erreur, on continue avec la création
+        // Si erreur RLS ou autre, on affiche le modal de création
+        setCurrentStep('super-admin-setup');
+        setIsLoading(false);
+        return;
       }
 
-      if (!superAdmins || superAdmins.length === 0) {
+      if (!superAdminCount || superAdminCount === 0) {
         console.log('⚠️ Aucun Super-Admin trouvé, création nécessaire');
         setCurrentStep('super-admin-setup');
         setIsLoading(false);
         return;
       }
 
-      console.log('✅ Super-Admin existe:', superAdmins[0].email);
+      console.log(`✅ ${superAdminCount} Super-Admin(s) trouvé(s)`);
 
       // 2. Vérifier si au moins une organisation existe
       console.log('🔍 Vérification Organisations...');
@@ -78,26 +79,26 @@ const WorkflowGuard: React.FC<WorkflowGuardProps> = ({ children }) => {
 
       console.log(`✅ ${orgCount} organisation(s) trouvée(s)`);
 
-      // 3. Vérifier si au moins un utilisateur Admin existe dans profiles
-      console.log('🔍 Vérification Profils Admin...');
-      const { count: adminCount, error: profileError } = await supabase
-        .from('profiles')
+      // 3. Vérifier si au moins un utilisateur Admin existe dans users
+      console.log('🔍 Vérification Utilisateurs Admin...');
+      const { count: adminCount, error: userAdminError } = await supabase
+        .from('users')
         .select('*', { count: 'exact', head: true })
         .eq('role', 'admin');
 
-      if (profileError) {
-        console.error('❌ Erreur Profils:', profileError);
+      if (userAdminError) {
+        console.error('❌ Erreur Utilisateurs Admin:', userAdminError);
         // Si erreur 403 ou table inexistante, on passe à l'étape suivante
       }
 
       if (!adminCount || adminCount === 0) {
-        console.log('⚠️ Aucun admin trouvé dans profiles, création nécessaire');
+        console.log('⚠️ Aucun admin trouvé dans users, création nécessaire');
         setCurrentStep('admin-setup');
         setIsLoading(false);
         return;
       }
 
-      console.log(`✅ ${adminCount} admin(s) trouvé(s) dans profiles`);
+      console.log(`✅ ${adminCount} admin(s) trouvé(s) dans users`);
 
       // 4. Vérifier si au moins un utilisateur existe dans users
       console.log('🔍 Vérification Utilisateurs...');

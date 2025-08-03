@@ -113,13 +113,11 @@ const SuperAdminSetupModal: React.FC<SuperAdminSetupModalProps> = ({ isOpen, onC
         });
 
         await supabase.from('users').insert({
-          id: authData.user.id,
-          email: formData.email,
-          nom: formData.nom,
-          prenom: formData.prenom,
+          auth_user_id: authData.user.id,
+          full_name: `${formData.prenom} ${formData.nom}`,
           phone: formData.phone,
           role: 'superadmin',
-          est_actif: true
+          is_active: true
         });
 
         toast.success('Super-Admin créé avec succès !');
