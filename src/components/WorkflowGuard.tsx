@@ -31,130 +31,151 @@ const WorkflowGuard: React.FC<WorkflowGuardProps> = ({ children }) => {
   const checkWorkflowConditions = async () => {
     try {
       setIsLoading(true);
+      console.log('🔄 Démarrage du workflow de vérification...');
       
       // 1. Vérifier si Super-Admin existe
-      console.log('🔍 Vérification Super-Admin...');
-      const { count: superAdminCount, error: superAdminError } = await supabase
-        .from('super_admins')
-        .select('*', { count: 'exact', head: true });
-
-      if (superAdminError) {
-        console.error('❌ Erreur Super-Admin:', superAdminError);
-        // Si erreur RLS ou autre, on affiche le modal de création
+      const superAdminExists = await checkSuperAdminExists();
+      if (!superAdminExists) {
         setCurrentStep('super-admin-setup');
         setIsLoading(false);
         return;
       }
-
-      if (!superAdminCount || superAdminCount === 0) {
-        console.log('⚠️ Aucun Super-Admin trouvé, création nécessaire');
-        setCurrentStep('super-admin-setup');
-        setIsLoading(false);
-        return;
-      }
-
-      console.log(`✅ ${superAdminCount} Super-Admin(s) trouvé(s)`);
-
-      // 2. Vérifier si au moins une organisation existe
-      console.log('🔍 Vérification Organisations...');
-      const { count: orgCount, error: orgError } = await supabase
-        .from('organisations')
-        .select('*', { count: 'exact', head: true });
-
-      if (orgError) {
-        console.error('❌ Erreur Organisations:', orgError);
-        if (orgError.code === '42P01') { // Table doesn't exist
-          setCurrentStep('organisation-setup');
-          setIsLoading(false);
-          return;
-        }
-      }
-
-      if (!orgCount || orgCount === 0) {
-        console.log('⚠️ Aucune organisation trouvée, création nécessaire');
+      
+      // 2. Vérifier si organisation existe
+      const organisationExists = await checkOrganisationExists();
+      if (!organisationExists) {
         setCurrentStep('organisation-setup');
         setIsLoading(false);
         return;
       }
-
-      console.log(`✅ ${orgCount} organisation(s) trouvée(s)`);
-
-      // 3. Vérifier si au moins un utilisateur Admin existe dans users
-      console.log('🔍 Vérification Utilisateurs Admin...');
-      const { count: adminCount, error: userAdminError } = await supabase
-        .from('users')
-        .select('*', { count: 'exact', head: true })
-        .eq('role', 'admin');
-
-      if (userAdminError) {
-        console.error('❌ Erreur Utilisateurs Admin:', userAdminError);
-        // Si erreur 403 ou table inexistante, on passe à l'étape suivante
-      }
-
-      if (!adminCount || adminCount === 0) {
-        console.log('⚠️ Aucun admin trouvé dans users, création nécessaire');
+      
+      // 3. Vérifier si admin existe
+      const adminExists = await checkAdminExists();
+      if (!adminExists) {
         setCurrentStep('admin-setup');
         setIsLoading(false);
         return;
       }
-
-      console.log(`✅ ${adminCount} admin(s) trouvé(s) dans users`);
-
-      // 4. Vérifier si au moins un utilisateur existe dans users
-      console.log('🔍 Vérification Utilisateurs...');
-      const { count: userCount, error: userError } = await supabase
-        .from('users')
-        .select('*', { count: 'exact', head: true });
-
-      if (userError) {
-        console.error('❌ Erreur Utilisateurs:', userError);
-        // Si erreur, rediriger vers auth
+      
+      // 4. Vérifier si utilisateur connecté
+      const userConnected = await checkUserConnection();
+      if (!userConnected) {
         setCurrentStep('redirect-auth');
         setIsLoading(false);
         return;
       }
-
-      if (!userCount || userCount === 0) {
-        console.log('⚠️ Aucun utilisateur trouvé, redirection vers auth');
-        setCurrentStep('redirect-auth');
-        setIsLoading(false);
-        return;
-      }
-
-      console.log(`✅ ${userCount} utilisateur(s) trouvé(s)`);
-
-      // Tous les checks sont OK, workflow complet
-      console.log('🎉 Workflow complet, accès autorisé');
+      
+      // Workflow complet
+      console.log('🎉 Workflow complet, accès au Dashboard autorisé');
       setCurrentStep('complete');
 
     } catch (error) {
       console.error('❌ Erreur générale lors de la vérification:', error);
       toast.error('Erreur lors de la vérification du système');
-      setCurrentStep('super-admin-setup'); // Fallback vers le début
+      setCurrentStep('super-admin-setup');
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleSuperAdminCreated = (adminData: any) => {
-    console.log('✅ Super-Admin créé:', adminData);
-    toast.success('Super-Admin créé avec succès!');
-    // Relancer la vérification du workflow
-    checkWorkflowConditions();
+  const checkSuperAdminExists = async () => {
+    console.log('🔍 Vérification Super-Admin...');
+    try {
+      const { count, error } = await supabase
+        .from('super_admins')
+        .select('*', { count: 'exact', head: true });
+
+      if (error) {
+        console.error('❌ Erreur Super-Admin:', error);
+        return false;
+      }
+
+      const exists = count && count > 0;
+      console.log(exists ? `✅ ${count} Super-Admin(s) trouvé(s)` : '⚠️ Aucun Super-Admin trouvé');
+      return exists;
+    } catch (error) {
+      console.error('❌ Erreur lors de la vérification Super-Admin:', error);
+      return false;
+    }
   };
 
-  const handleOrganisationCreated = (orgId: string) => {
-    console.log('✅ Organisation créée:', orgId);
+  const checkOrganisationExists = async () => {
+    console.log('🔍 Vérification Organisations...');
+    try {
+      const { count, error } = await supabase
+        .from('organisations')
+        .select('*', { count: 'exact', head: true });
+
+      if (error) {
+        console.error('❌ Erreur Organisations:', error);
+        return false;
+      }
+
+      const exists = count && count > 0;
+      console.log(exists ? `✅ ${count} organisation(s) trouvée(s)` : '⚠️ Aucune organisation trouvée');
+      return exists;
+    } catch (error) {
+      console.error('❌ Erreur lors de la vérification Organisations:', error);
+      return false;
+    }
+  };
+
+  const checkAdminExists = async () => {
+    console.log('🔍 Vérification Utilisateurs Admin...');
+    try {
+      const { count, error } = await supabase
+        .from('users')
+        .select('*', { count: 'exact', head: true })
+        .eq('role', 'admin');
+
+      if (error) {
+        console.error('❌ Erreur Utilisateurs Admin:', error);
+        return false;
+      }
+
+      const exists = count && count > 0;
+      console.log(exists ? `✅ ${count} admin(s) trouvé(s)` : '⚠️ Aucun admin trouvé');
+      return exists;
+    } catch (error) {
+      console.error('❌ Erreur lors de la vérification Admin:', error);
+      return false;
+    }
+  };
+
+  const checkUserConnection = async () => {
+    console.log('🔍 Vérification Connexion Utilisateur...');
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        console.log('⚠️ Aucun utilisateur connecté');
+        return false;
+      }
+
+      console.log(`✅ Utilisateur connecté: ${user.email}`);
+      return true;
+    } catch (error) {
+      console.error('❌ Erreur lors de la vérification connexion:', error);
+      return false;
+    }
+  };
+
+  const handleSuperAdminCreated = () => {
+    console.log('✅ Super-Admin créé, passage à l\'étape suivante');
+    toast.success('Super-Admin créé avec succès!');
+    setCurrentStep('organisation-setup');
+  };
+
+  const handleOrganisationCreated = () => {
+    console.log('✅ Organisation créée, passage à l\'étape suivante');
     toast.success('Organisation créée avec succès!');
-    // Relancer la vérification du workflow
-    checkWorkflowConditions();
+    setCurrentStep('admin-setup');
   };
 
   const handleAdminSetupComplete = () => {
-    console.log('✅ Configuration admin terminée');
+    console.log('✅ Configuration admin terminée, vérification connexion');
     toast.success('Configuration terminée!');
-    // Relancer la vérification du workflow
-    checkWorkflowConditions();
+    setCurrentStep('redirect-auth');
   };
 
   // Loading state
