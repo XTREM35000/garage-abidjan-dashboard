@@ -31,7 +31,6 @@ import MultiInstanceSetup from '@/components/MultiInstanceSetup';
 
 // Layout
 import UnifiedLayout from '@/layout/UnifiedLayout';
-import GlobalLayout from '@/layout/GlobalLayout';
 
 // Créer une instance QueryClient
 const queryClient = new QueryClient({
@@ -53,14 +52,14 @@ const AutoReconnect: React.FC<{ children: React.ReactNode }> = ({ children }) =>
     const checkSession = async () => {
       try {
         const { data: { session }, error } = await supabase.auth.getSession();
-
+        
         if (session && !error) {
           const userRole = session.user?.user_metadata?.role || 'user';
           const currentPath = window.location.pathname;
-
+          
           // Ne pas rediriger si on est déjà sur une page appropriée
-          if (currentPath.includes('/dashboard') ||
-              currentPath.includes('/clients') ||
+          if (currentPath.includes('/dashboard') || 
+              currentPath.includes('/clients') || 
               currentPath.includes('/vehicules') ||
               currentPath.includes('/reparations') ||
               currentPath.includes('/stock') ||
@@ -132,14 +131,13 @@ const AppContent = () => {
 
   return (
     <AutoReconnect>
-      <GlobalLayout showHeader={true} showFooter={true}>
-        <Routes>
-          {/* =================== PAGES PUBLIQUES =================== */}
-          <Route path="/" element={<Index />} />
-          <Route path="/a-propos" element={<APropos />} />
-          <Route path="/aide" element={<Aide />} />
+      <Routes>
+        {/* =================== PAGES PUBLIQUES (sans layout) =================== */}
+        <Route path="/" element={<Index />} />
+        <Route path="/a-propos" element={<APropos />} />
+        <Route path="/aide" element={<Aide />} />
 
-        {/* =================== AUTHENTIFICATION =================== */}
+        {/* =================== AUTHENTIFICATION (sans layout) =================== */}
         <Route path="/auth" element={
           <SimpleAuthGuard requireAuth={false}>
             <Auth />
@@ -151,7 +149,7 @@ const AppContent = () => {
           </SimpleAuthGuard>
         } />
 
-        {/* =================== ROUTES PROTÉGÉES =================== */}
+        {/* =================== ROUTES PROTÉGÉES (avec UnifiedLayout seulement) =================== */}
         <Route path="/dashboard" element={
           <SimpleAuthGuard>
             <UnifiedLayout>
@@ -232,10 +230,9 @@ const AppContent = () => {
           </SimpleAuthGuard>
         } />
 
-          {/* =================== PAGE 404 =================== */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </GlobalLayout>
+        {/* =================== PAGE 404 =================== */}
+        <Route path="*" element={<NotFound />} />
+      </Routes>
     </AutoReconnect>
   );
 };
