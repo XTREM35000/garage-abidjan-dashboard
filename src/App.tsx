@@ -27,10 +27,10 @@ import ThirdPartyDemo from '@/pages/ThirdPartyDemo';
 // Components
 import SimpleAuthGuard from '@/components/SimpleAuthGuard';
 import ErrorBoundary from '@/components/ErrorBoundary';
-import MultiInstanceSetup from '@/components/MultiInstanceSetup';
+import SimpleSetup from '@/components/SimpleSetup';
 
 // Layout
-import UnifiedLayout from '@/layout/UnifiedLayout';
+import AppLayout from '@/layout/AppLayout';
 
 // Créer une instance QueryClient
 const queryClient = new QueryClient({
@@ -120,12 +120,12 @@ const AutoReconnect: React.FC<{ children: React.ReactNode }> = ({ children }) =>
 const AppContent = () => {
   const [setupComplete, setSetupComplete] = useState(false);
 
-  // Workflow multi-instance
+  // Workflow de setup simplifié
   if (!setupComplete) {
     return (
-      <MultiInstanceSetup onComplete={() => setSetupComplete(true)}>
+      <SimpleSetup onComplete={() => setSetupComplete(true)}>
         <></>
-      </MultiInstanceSetup>
+      </SimpleSetup>
     );
   }
 
@@ -149,84 +149,64 @@ const AppContent = () => {
           </SimpleAuthGuard>
         } />
 
-        {/* =================== ROUTES PROTÉGÉES (avec UnifiedLayout seulement) =================== */}
+        {/* =================== ROUTES PROTÉGÉES (avec AppLayout unifié) =================== */}
         <Route path="/dashboard" element={
           <SimpleAuthGuard>
-            <UnifiedLayout>
-              <Dashboard />
-            </UnifiedLayout>
+            <Dashboard />
           </SimpleAuthGuard>
         } />
 
         <Route path="/clients/liste" element={
           <SimpleAuthGuard>
-            <UnifiedLayout>
-              <ClientsListe />
-            </UnifiedLayout>
+            <ClientsListe />
           </SimpleAuthGuard>
         } />
 
         <Route path="/clients/ajouter" element={
           <SimpleAuthGuard>
-            <UnifiedLayout>
-              <ClientsAjouter />
-            </UnifiedLayout>
+            <ClientsAjouter />
           </SimpleAuthGuard>
         } />
 
         <Route path="/clients/historique" element={
           <SimpleAuthGuard>
-            <UnifiedLayout>
-              <ClientsHistorique />
-            </UnifiedLayout>
+            <ClientsHistorique />
           </SimpleAuthGuard>
         } />
 
         <Route path="/vehicules" element={
           <SimpleAuthGuard>
-            <UnifiedLayout>
-              <Vehicules />
-            </UnifiedLayout>
+            <Vehicules />
           </SimpleAuthGuard>
         } />
 
         <Route path="/reparations" element={
           <SimpleAuthGuard>
-            <UnifiedLayout>
-              <Reparations />
-            </UnifiedLayout>
+            <Reparations />
           </SimpleAuthGuard>
         } />
 
         <Route path="/stock" element={
           <SimpleAuthGuard>
-            <UnifiedLayout>
-              <Stock />
-            </UnifiedLayout>
+            <Stock />
           </SimpleAuthGuard>
         } />
 
         <Route path="/settings" element={
           <SimpleAuthGuard>
-            <UnifiedLayout>
-              <Settings />
-            </UnifiedLayout>
+            <Settings />
           </SimpleAuthGuard>
         } />
 
         <Route path="/profil" element={
           <SimpleAuthGuard>
-            <UnifiedLayout>
-              <Profil />
-            </UnifiedLayout>
+            <Profil />
           </SimpleAuthGuard>
         } />
 
         <Route path="/third-party-demo" element={
           <SimpleAuthGuard>
-            <UnifiedLayout>
-              <ThirdPartyDemo />
-            </UnifiedLayout>
+            <ThirdPartyDemo />
           </SimpleAuthGuard>
         } />
 
@@ -237,8 +217,12 @@ const AppContent = () => {
   );
 };
 
-// Content without complex providers for now
-const AppContentSimple = () => <AppContent />;
+// Wrapper pour inclure AppLayout
+const AppWithLayout = () => (
+  <AppLayout>
+    <AppContent />
+  </AppLayout>
+);
 
 // Composant principal App
 const App: React.FC = () => {
@@ -248,7 +232,7 @@ const App: React.FC = () => {
         <ThemeProvider>
           <QueryClientProvider client={queryClient}>
             <TooltipProvider>
-              <AppContentSimple />
+              <AppWithLayout />
               <Toaster />
             </TooltipProvider>
           </QueryClientProvider>

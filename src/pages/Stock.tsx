@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import UnifiedLayout from '@/layout/UnifiedLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -245,7 +244,7 @@ const Stock: React.FC = () => {
   };
 
   return (
-    <UnifiedLayout>
+    <div>
       <div className="py-8 w-full">
         {/* Image de fond */}
         <img
@@ -478,7 +477,7 @@ const Stock: React.FC = () => {
         onEdit={openEditModal}
         onDelete={handleDeleteItem}
       />
-    </UnifiedLayout>
+    </div>
   );
 };
 

@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import UnifiedLayout from '@/layout/UnifiedLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -195,23 +194,21 @@ const Profil: React.FC = () => {
 
   if (!user) {
     return (
-      <UnifiedLayout>
-        <div className="py-8 w-full max-w-4xl mx-auto">
-          <Card className="shadow-soft animate-fade-in">
-            <CardHeader>
-              <CardTitle>Profil</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground">Aucun utilisateur connecté.</p>
-            </CardContent>
-          </Card>
-        </div>
-      </UnifiedLayout>
+      <div className="py-8 w-full max-w-4xl mx-auto">
+        <Card className="shadow-soft animate-fade-in">
+          <CardHeader>
+            <CardTitle>Profil</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-muted-foreground">Aucun utilisateur connecté.</p>
+          </CardContent>
+        </Card>
+      </div>
     );
   }
 
   return (
-    <UnifiedLayout>
+    <div>
       <div className="py-8 w-full max-w-6xl mx-auto px-4">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Carte de profil principale */}
@@ -574,7 +571,7 @@ const Profil: React.FC = () => {
           </div>
         </div>
       </div>
-    </UnifiedLayout>
+    </div>
   );
 };
 

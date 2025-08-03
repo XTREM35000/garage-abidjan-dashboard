@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import UnifiedLayout from '@/layout/UnifiedLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -258,7 +257,7 @@ const Reparations: React.FC = () => {
   };
 
   return (
-    <UnifiedLayout>
+    <div>
       <div className="py-8 w-full">
         <img
           src="https://images.unsplash.com/photo-1502877338535-766e1452684a?auto=format&fit=crop&w=900&q=80"
@@ -522,7 +521,7 @@ const Reparations: React.FC = () => {
         onEdit={openEditModal}
         onDelete={handleDeleteReparation}
       />
-    </UnifiedLayout>
+    </div>
   );
 };
 

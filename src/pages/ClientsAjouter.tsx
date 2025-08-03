@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import UnifiedLayout from '@/layout/UnifiedLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Users, Plus, ArrowLeft } from 'lucide-react';
@@ -13,8 +12,7 @@ const ClientsAjouter: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
 
   return (
-    <UnifiedLayout>
-      <div className="py-8 w-full">
+    <div className="py-8 w-full">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-4">
             <Link to="/clients/liste">
@@ -72,8 +70,7 @@ const ClientsAjouter: React.FC = () => {
           }}
           isLoading={isLoading}
         />
-      </div>
-    </UnifiedLayout>
+    </div>
   );
 };
 

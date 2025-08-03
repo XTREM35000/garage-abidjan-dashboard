@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import UnifiedLayout from '@/layout/UnifiedLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -80,7 +79,7 @@ const Settings: React.FC = () => {
   };
 
   return (
-    <UnifiedLayout>
+    <div>
       <div className="py-8 w-full">
         <div className="flex items-center justify-between mb-8">
           <div>
@@ -519,7 +518,7 @@ const Settings: React.FC = () => {
           </TabsContent>
         </Tabs>
       </div>
-    </UnifiedLayout>
+    </div>
   );
 };
 

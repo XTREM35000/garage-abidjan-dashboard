@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import UnifiedLayout from '@/layout/UnifiedLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -325,7 +324,7 @@ const ClientsListe: React.FC = () => {
   };
 
   return (
-    <UnifiedLayout>
+    <div>
       <div className="py-8 w-full">
         <img
           src="https://images.unsplash.com/photo-1503736334956-4c8f8e92946d?auto=format&fit=crop&w=900&q=80"
@@ -580,7 +579,7 @@ const ClientsListe: React.FC = () => {
         onEdit={openEditModal}
         onDelete={handleDeleteClient}
       />
-    </UnifiedLayout>
+    </div>
   );
 };
 

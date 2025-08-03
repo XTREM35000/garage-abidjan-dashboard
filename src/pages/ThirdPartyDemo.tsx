@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import UnifiedLayout from '@/layout/UnifiedLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -104,7 +103,7 @@ const ThirdPartyDemo: React.FC = () => {
   const validatedAuthorizations = getValidatedAuthorizations();
 
   return (
-    <UnifiedLayout>
+    <div>
       <div className="py-8 w-full">
         <div className="flex justify-between items-center mb-6">
           <div>
@@ -339,7 +338,7 @@ const ThirdPartyDemo: React.FC = () => {
           />
         )}
       </div>
-    </UnifiedLayout>
+    </div>
   );
 };
 

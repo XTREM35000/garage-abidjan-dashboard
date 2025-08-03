@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import UnifiedLayout from '@/layout/UnifiedLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -301,7 +300,7 @@ const Vehicules: React.FC = () => {
   };
 
   return (
-    <UnifiedLayout>
+    <div>
       <div className="py-8 w-full">
         <img
           src="https://images.unsplash.com/photo-1549317661-bd32c8ce0db2?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80"
@@ -554,7 +553,7 @@ const Vehicules: React.FC = () => {
         onEdit={openEditModal}
         onDelete={handleDeleteVehicle}
       />
-    </UnifiedLayout>
+    </div>
   );
 };
 
