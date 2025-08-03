@@ -35,24 +35,31 @@ export const OrganisationOnboarding: React.FC<Props> = ({ isOpen, onComplete, pl
         .replace(/-+/g, '-')
         .replace(/^-|-$/g, '');
 
-      const { data, error } = await supabase.functions.invoke('create-organisation', {
-        body: {
-          nom: formData.nom,
-          slug,
-          email_admin: formData.adminEmail,
-          password: formData.adminPassword,
-          plan: plan || 'starter', // Ajout du plan dans la création
-        }
-      });
+      // Générer un code unique pour l'organisation
+      const code = slug.toUpperCase().substring(0, 6) + Date.now().toString().slice(-4);
 
-      if (error) throw error;
+      // Créer l'organisation directement
+      const { data: orgData, error: orgError } = await supabase
+        .from('organisations')
+        .insert({
+          name: formData.nom,
+          code: code,
+          slug: slug,
+          email: formData.adminEmail,
+          subscription_type: plan === 'annual' ? 'lifetime' : 'monthly',
+          is_active: true
+        })
+        .select()
+        .single();
+
+      if (orgError) throw orgError;
 
       toast({
         title: "Organisation créée avec succès",
         description: `Bienvenue dans ${formData.nom} !`
       });
 
-      onComplete(data.organisation_id || data.org_id);
+      onComplete(orgData.id);
     } catch (error: any) {
       toast({
         title: "Erreur lors de la création",
