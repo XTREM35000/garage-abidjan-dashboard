@@ -210,10 +210,8 @@ const WorkflowGuard: React.FC<WorkflowGuardProps> = ({ children }) => {
       );
 
     case 'redirect-auth':
-      // Redirection immédiate vers /auth
-      React.useEffect(() => {
-        navigate('/auth');
-      }, []);
+      // Redirection immédiate vers /auth  
+      navigate('/auth');
       return <SplashScreen onComplete={() => {}} />;
 
     case 'complete':
