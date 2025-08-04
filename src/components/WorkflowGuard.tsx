@@ -167,8 +167,8 @@ const WorkflowGuard: React.FC<WorkflowGuardProps> = ({ children }) => {
   };
 
   const handleOrganisationCreated = () => {
-    console.log('✅ Organisation créée avec admin, redirection vers authentification');
-    toast.success('Organisation et administrateur créés avec succès!');
+    console.log('✅ Organisation créée, redirection vers page d\'inscription');
+    toast.success('Organisation créée avec succès! Créez maintenant votre compte administrateur.');
     setCurrentStep('redirect-auth');
   };
 

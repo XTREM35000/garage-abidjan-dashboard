@@ -29,20 +29,6 @@ export const OrganisationOnboarding: React.FC<Props> = ({ isOpen, onComplete, pl
     setIsLoading(true);
 
     try {
-      // Étape 1: Créer le compte utilisateur admin
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: formData.adminEmail,
-        password: formData.adminPassword,
-        options: {
-          data: {
-            full_name: 'Administrateur'
-          }
-        }
-      });
-
-      if (authError) throw authError;
-      if (!authData.user) throw new Error('Échec de création du compte administrateur');
-
       // Générer le slug automatiquement si vide
       const slug = formData.slug || formData.nom.toLowerCase()
         .replace(/[^a-z0-9]/g, '-')
@@ -52,7 +38,7 @@ export const OrganisationOnboarding: React.FC<Props> = ({ isOpen, onComplete, pl
       // Générer un code unique pour l'organisation
       const code = slug.toUpperCase().substring(0, 6) + Date.now().toString().slice(-4);
 
-      // Étape 2: Créer l'organisation
+      // Créer l'organisation directement
       const { data: orgData, error: orgError } = await supabase
         .from('organisations')
         .insert({
@@ -61,30 +47,16 @@ export const OrganisationOnboarding: React.FC<Props> = ({ isOpen, onComplete, pl
           slug: slug,
           email: formData.adminEmail,
           subscription_type: plan === 'annual' ? 'lifetime' : 'monthly',
-          is_active: true,
-          created_by: authData.user.id
+          is_active: true
         })
         .select()
         .single();
 
       if (orgError) throw orgError;
 
-      // Étape 3: Créer l'entrée utilisateur admin
-      const { error: userError } = await supabase
-        .from('users')
-        .insert({
-          auth_user_id: authData.user.id,
-          organisation_id: orgData.id,
-          role: 'admin',
-          full_name: 'Administrateur',
-          is_active: true
-        });
-
-      if (userError) throw userError;
-
       toast({
-        title: "Organisation et administrateur créés avec succès",
-        description: `Bienvenue dans ${formData.nom} ! Vous pouvez maintenant vous connecter.`
+        title: "Organisation créée avec succès",
+        description: `${formData.nom} a été créée ! Vous pouvez maintenant créer votre compte administrateur.`
       });
 
       onComplete(orgData.id);
@@ -195,9 +167,9 @@ export const OrganisationOnboarding: React.FC<Props> = ({ isOpen, onComplete, pl
             </h4>
             <ul className="text-sm text-blue-800 dark:text-blue-200 space-y-1">
               <li>• Votre organisation sera créée avec un plan starter</li>
-              <li>• Vous pourrez inviter jusqu'à 5 utilisateurs</li>
-              <li>• Vous aurez accès à 1Go de stockage</li>
-              <li>• Un compte administrateur sera automatiquement configuré</li>
+              <li>• Vous serez redirigé vers la page d'inscription</li>
+              <li>• Vous pourrez créer votre compte administrateur</li>
+              <li>• Vous aurez accès à 1Go de stockage et 5 utilisateurs</li>
             </ul>
           </div>
 
