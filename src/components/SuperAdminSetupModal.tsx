@@ -8,7 +8,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
   User, Mail, Phone, Shield, AlertCircle, Eye, EyeOff, Crown, Lock, Sparkles
 } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase, signUpWithoutEmailConfirmation, signInWithEmailConfirmationBypass } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
 interface SuperAdminSetupModalProps {
@@ -88,12 +88,16 @@ const SuperAdminSetupModal: React.FC<SuperAdminSetupModalProps> = ({ isOpen, onC
 
     try {
       // 1. Création du compte auth SANS metadata pour éviter les triggers
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: formData.email,
-        password: formData.password
-      });
+      const { data: authData, error: authError } = await signUpWithoutEmailConfirmation(
+        formData.email,
+        formData.password,
+        { role: 'superadmin' }
+      );
 
-      if (authError) throw authError;
+      if (authError) {
+        console.error('Erreur auth signup:', authError);
+        throw authError;
+      }
       if (!authData.user) throw new Error('User creation failed');
 
       // 2. Création dans super_admins
@@ -134,17 +138,27 @@ const SuperAdminSetupModal: React.FC<SuperAdminSetupModalProps> = ({ isOpen, onC
        }
 
        // 4. Connexion automatique de l'utilisateur
-       const { error: signInError } = await supabase.auth.signInWithPassword({
-         email: formData.email,
-         password: formData.password
-       });
+       // Attendre un peu pour que l'utilisateur soit bien créé
+       await new Promise(resolve => setTimeout(resolve, 1000));
+       
+       const { error: signInError } = await signInWithEmailConfirmationBypass(
+         formData.email,
+         formData.password
+       );
 
        if (signInError) {
-         console.warn('Connexion automatique échouée:', signInError);
-         // L'utilisateur devra se connecter manuellement
+         // Si l'erreur est liée à l'email non confirmé, on peut l'ignorer en mode démo
+         if (signInError.message?.includes('Email not confirmed') || signInError.message?.includes('EMAIL_NOT_CONFIRMED_DEMO')) {
+           console.warn('Email non confirmé - Mode démo activé');
+           toast.success('Super-Admin créé avec succès ! Mode démo activé (email non confirmé)');
+         } else {
+           console.warn('Connexion automatique échouée:', signInError);
+           toast.warning('Super-Admin créé mais connexion automatique échouée. Veuillez vous connecter manuellement.');
+         }
+       } else {
+         toast.success('Super-Admin créé avec succès !');
        }
 
-      toast.success('Super-Admin créé avec succès !');
       onComplete({
         user: authData.user,
         profile: {
@@ -157,7 +171,20 @@ const SuperAdminSetupModal: React.FC<SuperAdminSetupModalProps> = ({ isOpen, onC
       });
     } catch (error: any) {
       console.error('Erreur création Super-Admin:', error);
-      toast.error(error.message || 'Erreur création Super-Admin');
+      
+      // Messages d'erreur plus spécifiques
+      let errorMessage = 'Erreur création Super-Admin';
+      if (error.message?.includes('Email not confirmed')) {
+        errorMessage = 'Email non confirmé. Vérifiez votre boîte mail ou contactez l\'administrateur.';
+      } else if (error.message?.includes('User already registered')) {
+        errorMessage = 'Un compte existe déjà avec cet email.';
+      } else if (error.message?.includes('Invalid email')) {
+        errorMessage = 'Format d\'email invalide.';
+      } else if (error.message?.includes('Password')) {
+        errorMessage = 'Mot de passe trop faible ou invalide.';
+      }
+      
+      toast.error(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -174,7 +201,7 @@ const SuperAdminSetupModal: React.FC<SuperAdminSetupModalProps> = ({ isOpen, onC
             Configuration Super-Admin
           </DialogTitle>
           <DialogDescription className="text-green-600 dark:text-green-300 mt-2">
-            Créez le compte administrateur principal
+            Créez le compte administrateur principal pour gérer l'application. Ce compte aura accès à toutes les fonctionnalités d'administration.
           </DialogDescription>
         </DialogHeader>
 

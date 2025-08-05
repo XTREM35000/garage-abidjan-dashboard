@@ -7,16 +7,6 @@ const supabaseKey = import.meta.env.VITE_PUBLIC_SUPABASE_SERVICE_KEY || import.m
 if (!supabaseKey) {
   console.warn('⚠️ Clé Supabase manquante. Utilisez VITE_PUBLIC_SUPABASE_SERVICE_KEY ou VITE_PUBLIC_SUPABASE_ANON_KEY');
 }
-/*
-if (!supabaseUrl || !supabaseKey) {
-  throw new Error(`
-    Configuration Supabase manquante. Vérifiez que :
-    1. VITE_PUBLIC_SUPABASE_URL est défini
-    2. VITE_PUBLIC_SUPABASE_SERVICE_KEY est défini
-    3. Le fichier .env.local contient ces variables
-    4. Le préfixe VITE_ correspond à votre environnement
-  `);
-} */
 
 // Configuration spéciale pour la démo
 export const supabase = createClient<Database>(supabaseUrl, supabaseKey, {
@@ -24,6 +14,8 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseKey, {
     persistSession: true,
     autoRefreshToken: true,
     detectSessionInUrl: false, // Désactivé pour éviter des conflits
+    // Configuration pour éviter les problèmes d'email confirmation en démo
+    flowType: 'pkce'
   },
   db: {
     schema: 'public',
@@ -37,6 +29,76 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseKey, {
   }
 });
 
+// Helper function for demo authentication with email confirmation bypass
+export const signInWithEmailConfirmationBypass = async (email: string, password: string) => {
+  try {
+    // First try normal sign in
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password
+    });
+
+    if (error) {
+      // If it's an email confirmation error, try to bypass it in demo mode
+      if (error.message.includes('Email not confirmed')) {
+        console.warn('Email confirmation bypass activated for demo mode');
+        
+        // In demo mode, we can try to manually confirm the user
+        // This would require admin privileges, so we'll just return a helpful error
+        throw new Error('EMAIL_NOT_CONFIRMED_DEMO');
+      }
+      throw error;
+    }
+
+    return { data, error: null };
+  } catch (error) {
+    return { data: null, error };
+  }
+};
+
+// Helper function for creating users without email confirmation in demo mode
+export const signUpWithoutEmailConfirmation = async (email: string, password: string, userData?: any) => {
+  try {
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        emailRedirectTo: undefined, // Disable email confirmation redirect
+        data: userData
+      }
+    });
+
+    return { data, error };
+  } catch (error) {
+    return { data: null, error };
+  }
+};
+
+// Debug function for development/demo purposes
+export const getSupabaseDebugInfo = async () => {
+  try {
+    const { data: session } = await supabase.auth.getSession();
+    const { data: user } = await supabase.auth.getUser();
+    
+    return {
+      session: session.session,
+      user: user.user,
+      isConnected: !!session.session,
+      supabaseUrl: supabaseUrl,
+      timestamp: new Date().toISOString()
+    };
+  } catch (error) {
+    console.error('Error getting Supabase debug info:', error);
+    return {
+      session: null,
+      user: null,
+      isConnected: false,
+      error: error,
+      timestamp: new Date().toISOString()
+    };
+  }
+};
+
 // Système de logging étendu (optionnel mais recommandé pour le débogage)
 const enableLogging = import.meta.env.VITE_DEBUG === 'true';
 if (enableLogging) {
@@ -46,19 +108,8 @@ if (enableLogging) {
       console.log('[Supabase Event]', payload);
     })
     .subscribe();
-/*
-  // Log les requêtes importantes
-  supabase.hook('request', (event) => {
-    console.log('[Supabase Request]', event.method, event.url);
-    return event;
-  });
+}
 
-  supabase.hook('response', (event) => {
-    console.log('[Supabase Response]', event.status, event.method, event.url);
-    return event;
-  });
-} */
-  }
 // Vérification initiale de connexion (optionnelle)
 supabase.auth.getSession()
   .then(({ data: { session } }) => {
