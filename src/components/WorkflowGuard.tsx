@@ -33,18 +33,19 @@ const WorkflowGuard: React.FC<WorkflowGuardProps> = ({ children }) => {
       setIsLoading(true);
       console.log('🔄 Démarrage du workflow de vérification...');
       
-      // 1. Vérifier si Super-Admin existe
-      const superAdminExists = await checkSuperAdminExists();
-      if (!superAdminExists) {
-        setCurrentStep('super-admin-setup');
+      // 1. Vérifier si des organisations existent (critère principal)
+      const organisationExists = await checkOrganisationExists();
+      if (!organisationExists) {
+        console.log('⚠️ Aucune organisation trouvée, affichage du pricing modal');
+        setCurrentStep('organisation-setup');
         setIsLoading(false);
         return;
       }
       
-      // 2. Vérifier si organisation existe
-      const organisationExists = await checkOrganisationExists();
-      if (!organisationExists) {
-        setCurrentStep('organisation-setup');
+      // 2. Vérifier si Super-Admin existe (uniquement si organisations existent)
+      const superAdminExists = await checkSuperAdminExists();
+      if (!superAdminExists) {
+        setCurrentStep('super-admin-setup');
         setIsLoading(false);
         return;
       }
@@ -198,6 +199,7 @@ const WorkflowGuard: React.FC<WorkflowGuardProps> = ({ children }) => {
         <OrganisationOnboarding
           isOpen={true}
           onComplete={handleOrganisationCreated}
+          showPricingFirst={true}
         />
       );
 

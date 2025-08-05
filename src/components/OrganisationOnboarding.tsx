@@ -7,14 +7,18 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Building2, Mail, User, Key } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import PricingModal from '@/components/PricingModal';
 
 interface Props {
   isOpen: boolean;
   onComplete: (organisationId: string) => void;
   plan?: string; // Ajout du plan sélectionné
+  showPricingFirst?: boolean; // Afficher d'abord le pricing modal
 }
 
-export const OrganisationOnboarding: React.FC<Props> = ({ isOpen, onComplete, plan }) => {
+export const OrganisationOnboarding: React.FC<Props> = ({ isOpen, onComplete, plan, showPricingFirst = false }) => {
+  const [currentStep, setCurrentStep] = useState(showPricingFirst ? 'pricing' : 'organisation');
+  const [selectedPlan, setSelectedPlan] = useState(plan || '');
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
     nom: '',
@@ -23,6 +27,11 @@ export const OrganisationOnboarding: React.FC<Props> = ({ isOpen, onComplete, pl
     adminPassword: ''
   });
   const { toast } = useToast();
+
+  const handlePlanSelection = (planId: string) => {
+    setSelectedPlan(planId);
+    setCurrentStep('organisation');
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -46,7 +55,7 @@ export const OrganisationOnboarding: React.FC<Props> = ({ isOpen, onComplete, pl
           code: code,
           slug: slug,
           email: formData.adminEmail,
-          subscription_type: plan === 'annual' ? 'lifetime' : 'monthly',
+          subscription_type: selectedPlan === 'annual' ? 'lifetime' : 'monthly',
           is_active: true
         })
         .select()
@@ -74,6 +83,16 @@ export const OrganisationOnboarding: React.FC<Props> = ({ isOpen, onComplete, pl
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
+
+  // Rendu selon l'étape
+  if (currentStep === 'pricing') {
+    return (
+      <PricingModal 
+        isOpen={isOpen} 
+        onSelectPlan={handlePlanSelection}
+      />
+    );
+  }
 
   return (
     <Dialog open={isOpen} onOpenChange={() => {}}>
