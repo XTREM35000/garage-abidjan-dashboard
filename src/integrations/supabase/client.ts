@@ -232,7 +232,16 @@ export const checkUserPermissions = async (userId: string, organizationId?: stri
       // Récupérer les organisations de l'utilisateur
       const { data: userOrgs, error } = await supabase
         .from('user_organizations')
-        .select('organization_id, role, organisations(*)')
+        .select(`
+          organization_id, 
+          role, 
+          organisations!inner(
+            id,
+            nom,
+            code,
+            description
+          )
+        `)
         .eq('user_id', userId);
 
       if (error) throw error;
@@ -246,7 +255,15 @@ export const checkUserPermissions = async (userId: string, organizationId?: stri
     // Vérifier l'accès à une organisation spécifique
     const { data: userOrg, error } = await supabase
       .from('user_organizations')
-      .select('role, organisations(*)')
+      .select(`
+        role, 
+        organisations!inner(
+          id,
+          nom,
+          code,
+          description
+        )
+      `)
       .eq('user_id', userId)
       .eq('organization_id', organizationId)
       .single();
@@ -263,6 +280,81 @@ export const checkUserPermissions = async (userId: string, organizationId?: stri
     return {
       hasAccess: false,
       error: error
+    };
+  }
+};
+
+// Vérifier si l'utilisateur est un super admin
+export const checkSuperAdminStatus = async (userId?: string): Promise<{ isSuperAdmin: boolean, error?: any }> => {
+  try {
+    const userIdToCheck = userId || (await supabase.auth.getUser()).data.user?.id;
+    
+    if (!userIdToCheck) {
+      return { isSuperAdmin: false };
+    }
+
+    const { data, error } = await supabase
+      .from('super_admins')
+      .select('id, est_actif')
+      .eq('user_id', userIdToCheck)
+      .eq('est_actif', true)
+      .single();
+
+    if (error && error.code !== 'PGRST116') {
+      throw error;
+    }
+
+    return {
+      isSuperAdmin: !!data
+    };
+  } catch (error) {
+    console.error('Super admin check error:', error);
+    return {
+      isSuperAdmin: false,
+      error: error
+    };
+  }
+};
+
+// Fonction pour récupérer les organisations disponibles
+export const getAvailableOrganizations = async () => {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) {
+      return { organizations: [], error: 'Utilisateur non connecté' };
+    }
+
+    // Vérifier si c'est un super admin
+    const { isSuperAdmin } = await checkSuperAdminStatus(user.id);
+    
+    if (isSuperAdmin) {
+      // Super admin peut voir toutes les organisations
+      const { data: allOrgs, error } = await supabase
+        .from('organisations')
+        .select('id, nom, code, description, created_at')
+        .order('nom');
+
+      if (error) throw error;
+      
+      return {
+        organizations: allOrgs || [],
+        isSuperAdmin: true
+      };
+    } else {
+      // Utilisateur normal ne voit que ses organisations
+      const { organizations } = await checkUserPermissions(user.id);
+      
+      return {
+        organizations: organizations.map(org => org.organisations),
+        isSuperAdmin: false
+      };
+    }
+  } catch (error) {
+    console.error('Error getting organizations:', error);
+    return {
+      organizations: [],
+      error: error.message
     };
   }
 };
