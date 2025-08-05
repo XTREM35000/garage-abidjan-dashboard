@@ -1,198 +1,177 @@
-import React, { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import SplashScreen from '@/components/SplashScreen';
-import InitializationWizard from '@/components/InitializationWizard';
-import AuthGuard from '@/components/AuthGuard';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import SplashScreen from './SplashScreen';
+import InitializationWizard from './InitializationWizard';
 
 interface WorkflowGuardProps {
   children: React.ReactNode;
 }
 
-type WorkflowStep =
-  | 'loading'
-  | 'initialization'
-  | 'redirect-auth'
-  | 'complete';
-
-type InitializationStep = 'super-admin' | 'pricing' | 'organization-admin';
+type WorkflowState = 'loading' | 'needs-init' | 'needs-auth' | 'ready';
 
 const WorkflowGuard: React.FC<WorkflowGuardProps> = ({ children }) => {
-  const [currentStep, setCurrentStep] = useState<WorkflowStep>('loading');
-  const [initializationStep, setInitializationStep] = useState<InitializationStep>('super-admin');
-  const [isLoading, setIsLoading] = useState(true);
+  const [workflowState, setWorkflowState] = useState<WorkflowState>('loading');
+  const [initStep, setInitStep] = useState<'super-admin' | 'pricing' | 'organization-admin'>('super-admin');
   const navigate = useNavigate();
 
   useEffect(() => {
-    checkWorkflowConditions();
+    checkWorkflowState();
   }, []);
 
-  // Gestion de l'authentification
-  const handleAuthSuccess = (user: any) => {
-    console.log('✅ Utilisateur connecté:', user);
-    // Recharger le workflow
-    checkWorkflowConditions();
-  };
-
-  const checkWorkflowConditions = async () => {
+  const checkWorkflowState = async () => {
     try {
-      setIsLoading(true);
-      console.log('🔄 Démarrage du workflow de vérification...');
+      console.log('🔍 Vérification de l\'état du workflow...');
 
-      // 1. Vérifier si Super-Admin existe
-      const superAdminExists = await checkSuperAdminExists();
-      if (!superAdminExists) {
-        console.log('⚠️ Aucun Super-Admin trouvé, affichage du modal Super-Admin');
-        setInitializationStep('super-admin');
-        setCurrentStep('initialization');
-        setIsLoading(false);
-        return;
-      }
-
-      // 2. Vérifier si des organisations existent
-      const organisationExists = await checkOrganisationExists();
-      if (!organisationExists) {
-        console.log('⚠️ Aucune organisation trouvée, affichage du pricing modal');
-        setInitializationStep('pricing');
-        setCurrentStep('initialization');
-        setIsLoading(false);
-        return;
-      }
-
-      // 3. Vérifier si utilisateur connecté
-      const userConnected = await checkUserConnection();
-      if (!userConnected) {
-        setCurrentStep('redirect-auth');
-        setIsLoading(false);
-        return;
-      }
-
-      // Workflow complet
-      console.log('🎉 Workflow complet, accès au Dashboard autorisé');
-      setCurrentStep('complete');
-
-    } catch (error) {
-      console.error('❌ Erreur générale lors de la vérification:', error);
-      toast.error('Erreur lors de la vérification du système');
-      setInitializationStep('super-admin');
-      setCurrentStep('initialization');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-
-  const checkSuperAdminExists = async () => {
-    try {
-      const { data, error } = await supabase
+      // 1. Vérifier si un super admin existe (PRIORITÉ ABSOLUE)
+      const { count: superAdminCount, error: superAdminError } = await supabase
         .from('super_admins')
-        .select('id')
-        .limit(1);
+        .select('*', { count: 'exact', head: true });
 
-      if (error) throw error;
-      return (data?.length || 0) > 0;
-    } catch (error) {
-      console.error('Erreur vérification Super-Admin:', error);
-      return false;
-    }
-  };
+      if (superAdminError) {
+        console.error('❌ Erreur vérification super admin:', superAdminError);
+        setWorkflowState('needs-init');
+        setInitStep('super-admin');
+        return;
+      }
 
-  const checkOrganisationExists = async () => {
-    console.log('🔍 Vérification Organisations...');
-    try {
-      const { count, error } = await supabase
+      if (!superAdminCount || superAdminCount === 0) {
+        console.log('⚠️ Aucun super admin trouvé - PREMIER LANCEMENT');
+        setWorkflowState('needs-init');
+        setInitStep('super-admin');
+        return;
+      }
+
+      console.log('✅ Super admin trouvé');
+
+      // 2. Vérifier si une organisation existe
+      const { count: orgCount, error: orgError } = await supabase
         .from('organisations')
         .select('*', { count: 'exact', head: true });
 
-      if (error) {
-        console.error('❌ Erreur Organisations:', error);
-        return false;
+      if (orgError) {
+        console.error('❌ Erreur vérification organisations:', orgError);
+        setWorkflowState('needs-init');
+        setInitStep('pricing');
+        return;
       }
 
-      const exists = count && count > 0;
-      console.log(exists ? `✅ ${count} organisation(s) trouvée(s)` : '⚠️ Aucune organisation trouvée');
-      return exists;
-    } catch (error) {
-      console.error('❌ Erreur lors de la vérification Organisations:', error);
-      return false;
-    }
-  };
-
-  const checkUserConnection = async () => {
-    console.log('🔍 Vérification connexion utilisateur...');
-    try {
-      const { data: { user }, error } = await supabase.auth.getUser();
-
-      if (error) {
-        console.error('❌ Erreur vérification utilisateur:', error);
-        return false;
+      if (!orgCount || orgCount === 0) {
+        console.log('⚠️ Aucune organisation trouvée - AFFICHER PRICING');
+        setWorkflowState('needs-init');
+        setInitStep('pricing');
+        return;
       }
 
-      const isConnected = !!user;
-      console.log(isConnected ? '✅ Utilisateur connecté' : '⚠️ Aucun utilisateur connecté');
-      return isConnected;
-    } catch (error) {
-      console.error('❌ Erreur lors de la vérification utilisateur:', error);
-      return false;
-    }
-  };
+      console.log('✅ Organisation trouvée');
 
-  const checkAdminExists = async () => {
-    console.log('🔍 Vérification Utilisateurs Admin...');
-    try {
-      const { count, error } = await supabase
+      // 3. Vérifier si des utilisateurs admin existent
+      const { count: adminCount, error: adminError } = await supabase
         .from('users')
         .select('*', { count: 'exact', head: true })
         .eq('role', 'admin');
 
-      if (error) {
-        console.error('❌ Erreur Utilisateurs Admin:', error);
-        return false;
+      if (adminError) {
+        console.error('❌ Erreur vérification admins:', adminError);
+        setWorkflowState('needs-init');
+        setInitStep('organization-admin');
+        return;
       }
 
-      const exists = count && count > 0;
-      console.log(exists ? `✅ ${count} admin(s) trouvé(s)` : '⚠️ Aucun admin trouvé');
-      return exists;
+      if (!adminCount || adminCount === 0) {
+        console.log('⚠️ Aucun admin trouvé - CRÉER ADMIN');
+        setWorkflowState('needs-init');
+        setInitStep('organization-admin');
+        return;
+      }
+
+      console.log('✅ Admins trouvés');
+
+      // 4. Vérifier la session utilisateur (seulement si tout le reste est OK)
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+
+      if (sessionError) {
+        console.error('❌ Erreur session:', sessionError);
+        setWorkflowState('needs-auth');
+        return;
+      }
+
+      if (!session) {
+        console.log('⚠️ Aucune session, redirection vers auth');
+        setWorkflowState('needs-auth');
+        return;
+      }
+
+      console.log('✅ Session utilisateur valide');
+
+      // Tout est prêt
+      console.log('🎉 Workflow complet, application prête');
+      setWorkflowState('ready');
+
     } catch (error) {
-      console.error('❌ Erreur lors de la vérification Admin:', error);
-      return false;
+      console.error('❌ Erreur lors de la vérification du workflow:', error);
+      // En cas d'erreur, forcer l'initialisation
+      setWorkflowState('needs-init');
+      setInitStep('super-admin');
     }
   };
 
-  const handleInitializationComplete = () => {
-    console.log('✅ Initialisation terminée, redirection vers page d\'authentification');
-    toast.success('Configuration terminée! Vous pouvez maintenant vous connecter.');
-    setCurrentStep('redirect-auth');
+  const handleInitComplete = () => {
+    console.log('✅ Initialisation terminée');
+    toast.success('Configuration terminée ! Vous pouvez maintenant vous connecter.');
+    setWorkflowState('ready');
+    // Rediriger vers auth pour que l'utilisateur se connecte
+    navigate('/auth');
   };
 
-  // Loading state
-  if (isLoading) {
+  // État de chargement
+  if (workflowState === 'loading') {
     return <SplashScreen onComplete={() => {}} />;
   }
 
-  // Rendu selon l'étape
-  switch (currentStep) {
-    case 'initialization':
-      return (
-        <InitializationWizard
-          isOpen={true}
-          onComplete={handleInitializationComplete}
-          startStep={initializationStep}
-        />
-      );
-
-    case 'redirect-auth':
-      return (
-        <div>
-          <AuthGuard>{children}</AuthGuard>
-        </div>
-      );
-
-    case 'complete':
-    default:
-      return <>{children}</>;
+  // Besoin d'initialisation (PRIORITÉ ABSOLUE)
+  if (workflowState === 'needs-init') {
+    console.log('🚀 Lancement du workflow d\'initialisation - Étape:', initStep);
+    return (
+      <InitializationWizard
+        isOpen={true}
+        onComplete={handleInitComplete}
+        startStep={initStep}
+      />
+    );
   }
+
+  // Besoin d'authentification (seulement après initialisation complète)
+  if (workflowState === 'needs-auth') {
+    console.log('🔐 Redirection vers l\'authentification');
+    navigate('/auth');
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Redirection vers la page de connexion...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Prêt - afficher le contenu
+  if (workflowState === 'ready') {
+    return <>{children}</>;
+  }
+
+  // Fallback - forcer l'initialisation
+  console.log('⚠️ État inconnu, forcer l\'initialisation');
+  setWorkflowState('needs-init');
+  setInitStep('super-admin');
+  return (
+    <InitializationWizard
+      isOpen={true}
+      onComplete={handleInitComplete}
+      startStep="super-admin"
+    />
+  );
 };
 
 export default WorkflowGuard;

@@ -42,7 +42,7 @@ const LoginForm: React.FC = () => {
       }
     } catch (error: any) {
       console.error('Erreur de connexion:', error);
-      
+
       // Messages d'erreur plus spécifiques
       let errorMessage = 'Erreur de connexion';
       if (error.message?.includes('Email not confirmed')) {
@@ -56,7 +56,7 @@ const LoginForm: React.FC = () => {
       } else if (error.message) {
         errorMessage = error.message;
       }
-      
+
       setError(errorMessage);
       toast.error(errorMessage);
     } finally {

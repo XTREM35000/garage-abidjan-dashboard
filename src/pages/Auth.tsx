@@ -5,6 +5,8 @@ import { Shield } from 'lucide-react';
 import LoginForm from '@/components/Auth/LoginForm';
 import RegisterForm from '@/components/Auth/RegisterForm';
 import SimpleAuthGuard from '@/components/SimpleAuthGuard';
+import AuthStatusDebug from '@/components/AuthStatusDebug';
+import DatabaseDiagnostic from '@/components/DatabaseDiagnostic';
 
 const Auth: React.FC = () => {
   return (
@@ -37,6 +39,10 @@ const Auth: React.FC = () => {
             </Tabs>
           </CardContent>
         </Card>
+
+        {/* Composants de débogage pour diagnostiquer les problèmes */}
+        <AuthStatusDebug />
+        <DatabaseDiagnostic />
       </div>
     </SimpleAuthGuard>
   );

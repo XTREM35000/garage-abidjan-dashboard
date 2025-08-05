@@ -42,7 +42,7 @@ export const signInWithEmailConfirmationBypass = async (email: string, password:
       // If it's an email confirmation error, try to bypass it in demo mode
       if (error.message.includes('Email not confirmed')) {
         console.warn('Email confirmation bypass activated for demo mode');
-        
+
         // In demo mode, we can try to manually confirm the user
         // This would require admin privileges, so we'll just return a helpful error
         throw new Error('EMAIL_NOT_CONFIRMED_DEMO');
@@ -71,31 +71,6 @@ export const signUpWithoutEmailConfirmation = async (email: string, password: st
     return { data, error };
   } catch (error) {
     return { data: null, error };
-  }
-};
-
-// Debug function for development/demo purposes
-export const getSupabaseDebugInfo = async () => {
-  try {
-    const { data: session } = await supabase.auth.getSession();
-    const { data: user } = await supabase.auth.getUser();
-    
-    return {
-      session: session.session,
-      user: user.user,
-      isConnected: !!session.session,
-      supabaseUrl: supabaseUrl,
-      timestamp: new Date().toISOString()
-    };
-  } catch (error) {
-    console.error('Error getting Supabase debug info:', error);
-    return {
-      session: null,
-      user: null,
-      isConnected: false,
-      error: error,
-      timestamp: new Date().toISOString()
-    };
   }
 };
 
