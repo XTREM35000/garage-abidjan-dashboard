@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2, Mail, Lock } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
+import { signInWithEmailConfirmationBypass } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 
@@ -23,12 +23,16 @@ const LoginForm: React.FC = () => {
     setError('');
 
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: formData.email,
-        password: formData.password,
-      });
+      const { data, error } = await signInWithEmailConfirmationBypass(
+        formData.email,
+        formData.password
+      );
 
       if (error) {
+        // Handle special demo mode error
+        if (error.message?.includes('EMAIL_NOT_CONFIRMED_DEMO')) {
+          throw new Error('Email non confirmé. En mode démo, contactez l\'administrateur pour activer votre compte.');
+        }
         throw error;
       }
 
@@ -37,8 +41,24 @@ const LoginForm: React.FC = () => {
         navigate('/dashboard');
       }
     } catch (error: any) {
-      setError(error.message || 'Erreur de connexion');
-      toast.error(error.message || 'Erreur de connexion');
+      console.error('Erreur de connexion:', error);
+      
+      // Messages d'erreur plus spécifiques
+      let errorMessage = 'Erreur de connexion';
+      if (error.message?.includes('Email not confirmed')) {
+        errorMessage = 'Email non confirmé. Vérifiez votre boîte mail pour confirmer votre compte, ou contactez l\'administrateur en mode démo.';
+      } else if (error.message?.includes('Invalid login credentials')) {
+        errorMessage = 'Email ou mot de passe incorrect.';
+      } else if (error.message?.includes('Too many requests')) {
+        errorMessage = 'Trop de tentatives de connexion. Veuillez réessayer plus tard.';
+      } else if (error.message?.includes('Network')) {
+        errorMessage = 'Problème de connexion réseau. Vérifiez votre connexion internet.';
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      setError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setIsLoading(false);
     }
