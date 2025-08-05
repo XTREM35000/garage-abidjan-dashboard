@@ -99,6 +99,28 @@ export const getSupabaseDebugInfo = async () => {
   }
 };
 
+// Session validation helper
+export const validateSession = async () => {
+  try {
+    const { data: { session }, error } = await supabase.auth.getSession();
+    if (error) throw error;
+    
+    return {
+      isValid: !!session,
+      session: session,
+      user: session?.user || null
+    };
+  } catch (error) {
+    console.error('Session validation error:', error);
+    return {
+      isValid: false,
+      session: null,
+      user: null,
+      error: error
+    };
+  }
+};
+
 // Système de logging étendu (optionnel mais recommandé pour le débogage)
 const enableLogging = import.meta.env.VITE_DEBUG === 'true';
 if (enableLogging) {
