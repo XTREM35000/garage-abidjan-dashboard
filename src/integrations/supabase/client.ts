@@ -74,6 +74,31 @@ export const signUpWithoutEmailConfirmation = async (email: string, password: st
   }
 };
 
+// Debug function for development/demo purposes
+export const getSupabaseDebugInfo = async () => {
+  try {
+    const { data: session } = await supabase.auth.getSession();
+    const { data: user } = await supabase.auth.getUser();
+    
+    return {
+      session: session.session,
+      user: user.user,
+      isConnected: !!session.session,
+      supabaseUrl: supabaseUrl,
+      timestamp: new Date().toISOString()
+    };
+  } catch (error) {
+    console.error('Error getting Supabase debug info:', error);
+    return {
+      session: null,
+      user: null,
+      isConnected: false,
+      error: error,
+      timestamp: new Date().toISOString()
+    };
+  }
+};
+
 // Système de logging étendu (optionnel mais recommandé pour le débogage)
 const enableLogging = import.meta.env.VITE_DEBUG === 'true';
 if (enableLogging) {
