@@ -2,9 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
 import SplashScreen from '@/components/SplashScreen';
-import SuperAdminSetupModal from '@/components/SuperAdminSetupModal';
-import { OrganisationOnboarding } from '@/components/OrganisationOnboarding';
-import BrandSetupWizard from '@/components/BrandSetupWizard';
+import InitializationWizard from '@/components/InitializationWizard';
 import { toast } from 'sonner';
 
 interface WorkflowGuardProps {
@@ -13,14 +11,15 @@ interface WorkflowGuardProps {
 
 type WorkflowStep = 
   | 'loading'
-  | 'super-admin-setup' 
-  | 'organisation-setup'
-  | 'admin-setup'
+  | 'initialization'
   | 'redirect-auth'
   | 'complete';
 
+type InitializationStep = 'super-admin' | 'pricing' | 'organization-admin';
+
 const WorkflowGuard: React.FC<WorkflowGuardProps> = ({ children }) => {
   const [currentStep, setCurrentStep] = useState<WorkflowStep>('loading');
+  const [initializationStep, setInitializationStep] = useState<InitializationStep>('super-admin');
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
 
@@ -33,32 +32,27 @@ const WorkflowGuard: React.FC<WorkflowGuardProps> = ({ children }) => {
       setIsLoading(true);
       console.log('🔄 Démarrage du workflow de vérification...');
       
-      // 1. Vérifier si des organisations existent (critère principal)
+      // 1. Vérifier si Super-Admin existe
+      const superAdminExists = await checkSuperAdminExists();
+      if (!superAdminExists) {
+        console.log('⚠️ Aucun Super-Admin trouvé, affichage du modal Super-Admin');
+        setInitializationStep('super-admin');
+        setCurrentStep('initialization');
+        setIsLoading(false);
+        return;
+      }
+      
+      // 2. Vérifier si des organisations existent
       const organisationExists = await checkOrganisationExists();
       if (!organisationExists) {
         console.log('⚠️ Aucune organisation trouvée, affichage du pricing modal');
-        setCurrentStep('organisation-setup');
+        setInitializationStep('pricing');
+        setCurrentStep('initialization');
         setIsLoading(false);
         return;
       }
       
-      // 2. Vérifier si Super-Admin existe (uniquement si organisations existent)
-      const superAdminExists = await checkSuperAdminExists();
-      if (!superAdminExists) {
-        setCurrentStep('super-admin-setup');
-        setIsLoading(false);
-        return;
-      }
-      
-      // 3. Vérifier si admin existe
-      const adminExists = await checkAdminExists();
-      if (!adminExists) {
-        setCurrentStep('admin-setup');
-        setIsLoading(false);
-        return;
-      }
-      
-      // 4. Vérifier si utilisateur connecté
+      // 3. Vérifier si utilisateur connecté
       const userConnected = await checkUserConnection();
       if (!userConnected) {
         setCurrentStep('redirect-auth');
@@ -73,7 +67,8 @@ const WorkflowGuard: React.FC<WorkflowGuardProps> = ({ children }) => {
     } catch (error) {
       console.error('❌ Erreur générale lors de la vérification:', error);
       toast.error('Erreur lors de la vérification du système');
-      setCurrentStep('super-admin-setup');
+      setInitializationStep('super-admin');
+      setCurrentStep('initialization');
     } finally {
       setIsLoading(false);
     }
@@ -161,21 +156,9 @@ const WorkflowGuard: React.FC<WorkflowGuardProps> = ({ children }) => {
     }
   };
 
-  const handleSuperAdminCreated = () => {
-    console.log('✅ Super-Admin créé, passage à l\'étape suivante');
-    toast.success('Super-Admin créé avec succès!');
-    setCurrentStep('organisation-setup');
-  };
-
-  const handleOrganisationCreated = () => {
-    console.log('✅ Organisation créée, redirection vers page d\'inscription');
-    toast.success('Organisation créée avec succès! Créez maintenant votre compte administrateur.');
-    setCurrentStep('redirect-auth');
-  };
-
-  const handleAdminSetupComplete = () => {
-    console.log('✅ Configuration admin terminée, vérification connexion');
-    toast.success('Configuration terminée!');
+  const handleInitializationComplete = () => {
+    console.log('✅ Initialisation terminée, redirection vers page d\'authentification');
+    toast.success('Configuration terminée! Vous pouvez maintenant vous connecter.');
     setCurrentStep('redirect-auth');
   };
 
@@ -186,28 +169,12 @@ const WorkflowGuard: React.FC<WorkflowGuardProps> = ({ children }) => {
 
   // Rendu selon l'étape
   switch (currentStep) {
-    case 'super-admin-setup':
+    case 'initialization':
       return (
-        <SuperAdminSetupModal
+        <InitializationWizard
           isOpen={true}
-          onComplete={handleSuperAdminCreated}
-        />
-      );
-
-    case 'organisation-setup':
-      return (
-        <OrganisationOnboarding
-          isOpen={true}
-          onComplete={handleOrganisationCreated}
-          showPricingFirst={true}
-        />
-      );
-
-    case 'admin-setup':
-      return (
-        <BrandSetupWizard
-          isOpen={true}
-          onComplete={handleAdminSetupComplete}
+          onComplete={handleInitializationComplete}
+          startStep={initializationStep}
         />
       );
 
