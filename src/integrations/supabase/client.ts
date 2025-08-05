@@ -8,13 +8,12 @@ if (!supabaseKey) {
   console.warn('⚠️ Clé Supabase manquante. Utilisez VITE_PUBLIC_SUPABASE_SERVICE_KEY ou VITE_PUBLIC_SUPABASE_ANON_KEY');
 }
 
-// Configuration spéciale pour la démo
+// Configuration Supabase pour production avec vraie validation email
 export const supabase = createClient<Database>(supabaseUrl, supabaseKey, {
   auth: {
     persistSession: true,
     autoRefreshToken: true,
-    detectSessionInUrl: false, // Désactivé pour éviter des conflits
-    // Configuration pour éviter les problèmes d'email confirmation en démo
+    detectSessionInUrl: true, // Activé pour gérer les redirections email
     flowType: 'pkce'
   },
   db: {
@@ -22,59 +21,253 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseKey, {
   },
   global: {
     headers: {
-      'X-Client-Info': 'garage-abidjan-dashboard/demo-mode',
-      'apikey': supabaseKey, // Nécessaire pour les requêtes REST
-      'Authorization': `Bearer ${supabaseKey}`,
+      'X-Client-Info': 'garage-abidjan-dashboard/production',
     }
   }
 });
 
-// Helper function for demo authentication with email confirmation bypass
-export const signInWithEmailConfirmationBypass = async (email: string, password: string) => {
+// Types pour les réponses d'authentification
+export interface AuthResponse {
+  user: any;
+  session: any;
+  error?: string;
+}
+
+export interface ValidationResponse {
+  isValid: boolean;
+  session: any;
+  user: any;
+  error?: any;
+}
+
+// Messages d'erreur conviviaux
+const getFriendlyAuthError = (error: any): string => {
+  const message = error.message?.toLowerCase() || '';
+  
+  if (message.includes('email not confirmed')) {
+    return 'Veuillez confirmer votre email avant de vous connecter. Vérifiez votre boîte mail.';
+  }
+  if (message.includes('invalid login credentials')) {
+    return 'Email ou mot de passe incorrect.';
+  }
+  if (message.includes('user already registered')) {
+    return 'Un compte existe déjà avec cet email.';
+  }
+  if (message.includes('password')) {
+    return 'Le mot de passe doit contenir au moins 8 caractères.';
+  }
+  if (message.includes('email')) {
+    return 'Format d\'email invalide.';
+  }
+  if (message.includes('too many requests')) {
+    return 'Trop de tentatives. Veuillez réessayer dans quelques minutes.';
+  }
+  
+  return error.message || 'Une erreur inattendue s\'est produite.';
+};
+
+// Inscription avec vraie validation email
+export const signUpWithEmail = async (email: string, password: string, userData?: any): Promise<AuthResponse> => {
   try {
-    // First try normal sign in
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        emailRedirectTo: `${window.location.origin}/auth/confirm`,
+        data: userData
+      }
+    });
+
+    if (error) {
+      throw new Error(getFriendlyAuthError(error));
+    }
+
+    return {
+      user: data.user,
+      session: data.session
+    };
+  } catch (error: any) {
+    return {
+      user: null,
+      session: null,
+      error: error.message
+    };
+  }
+};
+
+// Connexion avec vérification email confirmé
+export const signInWithEmail = async (email: string, password: string): Promise<AuthResponse> => {
+  try {
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password
     });
 
     if (error) {
-      // If it's an email confirmation error, try to bypass it in demo mode
-      if (error.message.includes('Email not confirmed')) {
-        console.warn('Email confirmation bypass activated for demo mode');
-        
-        // In demo mode, we can try to manually confirm the user
-        // This would require admin privileges, so we'll just return a helpful error
-        throw new Error('EMAIL_NOT_CONFIRMED_DEMO');
-      }
+      throw new Error(getFriendlyAuthError(error));
+    }
+
+    // Vérifier que l'email est confirmé
+    if (data.user && !data.user.email_confirmed_at) {
+      throw new Error('Email non confirmé. Vérifiez votre boîte mail et cliquez sur le lien de confirmation.');
+    }
+
+    return {
+      user: data.user,
+      session: data.session
+    };
+  } catch (error: any) {
+    return {
+      user: null,
+      session: null,
+      error: error.message
+    };
+  }
+};
+
+// Validation de session avec vérification RLS
+export const validateSession = async (): Promise<ValidationResponse> => {
+  try {
+    const { data: { session }, error } = await supabase.auth.getSession();
+    
+    if (error) {
       throw error;
     }
 
-    return { data, error: null };
+    if (!session || !session.user) {
+      return {
+        isValid: false,
+        session: null,
+        user: null
+      };
+    }
+
+    // Vérifier que l'email est toujours confirmé
+    if (!session.user.email_confirmed_at) {
+      return {
+        isValid: false,
+        session: null,
+        user: null,
+        error: 'Email non confirmé'
+      };
+    }
+
+    return {
+      isValid: true,
+      session: session,
+      user: session.user
+    };
   } catch (error) {
-    return { data: null, error };
+    console.error('Session validation error:', error);
+    return {
+      isValid: false,
+      session: null,
+      user: null,
+      error: error
+    };
   }
 };
 
-// Helper function for creating users without email confirmation in demo mode
-export const signUpWithoutEmailConfirmation = async (email: string, password: string, userData?: any) => {
+// Déconnexion
+export const signOut = async (): Promise<{ error?: string }> => {
   try {
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
+    const { error } = await supabase.auth.signOut();
+    if (error) throw error;
+    return {};
+  } catch (error: any) {
+    return { error: error.message };
+  }
+};
+
+// Renvoyer email de confirmation
+export const resendConfirmation = async (email: string): Promise<{ error?: string }> => {
+  try {
+    const { error } = await supabase.auth.resend({
+      type: 'signup',
+      email: email,
       options: {
-        emailRedirectTo: undefined, // Disable email confirmation redirect
-        data: userData
+        emailRedirectTo: `${window.location.origin}/auth/confirm`
       }
     });
-
-    return { data, error };
-  } catch (error) {
-    return { data: null, error };
+    
+    if (error) throw error;
+    return {};
+  } catch (error: any) {
+    return { error: getFriendlyAuthError(error) };
   }
 };
 
-// Debug function for development/demo purposes
+// Réinitialisation de mot de passe
+export const resetPassword = async (email: string): Promise<{ error?: string }> => {
+  try {
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/auth/reset-password`
+    });
+    
+    if (error) throw error;
+    return {};
+  } catch (error: any) {
+    return { error: getFriendlyAuthError(error) };
+  }
+};
+
+// Mise à jour du mot de passe
+export const updatePassword = async (newPassword: string): Promise<{ error?: string }> => {
+  try {
+    const { error } = await supabase.auth.updateUser({
+      password: newPassword
+    });
+    
+    if (error) throw error;
+    return {};
+  } catch (error: any) {
+    return { error: getFriendlyAuthError(error) };
+  }
+};
+
+// Vérifier les permissions utilisateur pour une organisation
+export const checkUserPermissions = async (userId: string, organizationId?: string) => {
+  try {
+    if (!organizationId) {
+      // Récupérer les organisations de l'utilisateur
+      const { data: userOrgs, error } = await supabase
+        .from('user_organizations')
+        .select('organization_id, role, organisations(*)')
+        .eq('user_id', userId);
+
+      if (error) throw error;
+      
+      return {
+        organizations: userOrgs || [],
+        hasAccess: (userOrgs?.length || 0) > 0
+      };
+    }
+
+    // Vérifier l'accès à une organisation spécifique
+    const { data: userOrg, error } = await supabase
+      .from('user_organizations')
+      .select('role, organisations(*)')
+      .eq('user_id', userId)
+      .eq('organization_id', organizationId)
+      .single();
+
+    if (error && error.code !== 'PGRST116') throw error;
+
+    return {
+      hasAccess: !!userOrg,
+      role: userOrg?.role,
+      organization: userOrg?.organisations
+    };
+  } catch (error) {
+    console.error('Permission check error:', error);
+    return {
+      hasAccess: false,
+      error: error
+    };
+  }
+};
+
+// Debug function (conservée pour développement)
 export const getSupabaseDebugInfo = async () => {
   try {
     const { data: session } = await supabase.auth.getSession();
@@ -99,29 +292,7 @@ export const getSupabaseDebugInfo = async () => {
   }
 };
 
-// Session validation helper
-export const validateSession = async () => {
-  try {
-    const { data: { session }, error } = await supabase.auth.getSession();
-    if (error) throw error;
-    
-    return {
-      isValid: !!session,
-      session: session,
-      user: session?.user || null
-    };
-  } catch (error) {
-    console.error('Session validation error:', error);
-    return {
-      isValid: false,
-      session: null,
-      user: null,
-      error: error
-    };
-  }
-};
-
-// Système de logging étendu (optionnel mais recommandé pour le débogage)
+// Logging pour production (désactivé par défaut)
 const enableLogging = import.meta.env.VITE_DEBUG === 'true';
 if (enableLogging) {
   supabase
@@ -132,10 +303,12 @@ if (enableLogging) {
     .subscribe();
 }
 
-// Vérification initiale de connexion (optionnelle)
+// Vérification initiale de connexion
 supabase.auth.getSession()
   .then(({ data: { session } }) => {
-    console.log('Session initiale:', session);
+    if (enableLogging) {
+      console.log('Session initiale:', session);
+    }
   })
   .catch((error) => {
     console.error('Erreur vérification session:', error);

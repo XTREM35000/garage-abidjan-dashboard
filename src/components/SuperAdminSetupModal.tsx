@@ -8,7 +8,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
   User, Mail, Phone, Shield, AlertCircle, Eye, EyeOff, Crown, Lock, Sparkles
 } from 'lucide-react';
-import { supabase, signUpWithoutEmailConfirmation, signInWithEmailConfirmationBypass } from '@/integrations/supabase/client';
+import { supabase, signUpWithEmail } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
 interface SuperAdminSetupModalProps {
@@ -30,6 +30,7 @@ const SuperAdminSetupModal: React.FC<SuperAdminSetupModalProps> = ({ isOpen, onC
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [step, setStep] = useState<'form' | 'email-sent' | 'completed'>('form');
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
@@ -87,108 +88,136 @@ const SuperAdminSetupModal: React.FC<SuperAdminSetupModalProps> = ({ isOpen, onC
     setIsLoading(true);
 
     try {
-      // 1. Création du compte auth SANS metadata pour éviter les triggers
-      const { data: authData, error: authError } = await signUpWithoutEmailConfirmation(
+      // 1. Créer le compte avec vraie validation email
+      const { user, session, error: authError } = await signUpWithEmail(
         formData.email,
         formData.password,
-        { role: 'superadmin' }
+        {
+          role: 'superadmin',
+          nom: formData.nom,
+          prenom: formData.prenom,
+          phone: formData.phone
+        }
       );
 
       if (authError) {
-        console.error('Erreur auth signup:', authError);
-        throw authError;
+        throw new Error(authError);
       }
-      if (!authData.user) throw new Error('User creation failed');
 
-      // 2. Création dans super_admins
+      if (!user) {
+        throw new Error('Erreur lors de la création du compte');
+      }
+
+      // 2. Créer l'entrée super_admin (même si l'email n'est pas encore confirmé)
       const { error: insertError } = await supabase
         .from('super_admins')
         .insert({
-          user_id: authData.user.id,
+          user_id: user.id,
           email: formData.email,
           nom: formData.nom,
           prenom: formData.prenom,
           phone: formData.phone,
-          est_actif: true
-        } as any);
+          est_actif: false // Sera activé après confirmation email
+        });
 
       if (insertError) {
         console.error('Erreur insertion super_admins:', insertError);
-        throw insertError;
+        // Ne pas faire échouer le processus, juste logger
+        console.warn('Le super admin sera créé après confirmation email');
       }
 
-             // 3. Créer la relation user_organizations pour le Super-Admin
-       const { data: orgs } = await supabase
-         .from('organisations')
-         .select('id')
-         .limit(1);
+      // 3. Créer la relation user_organizations (si des organisations existent)
+      const { data: orgs } = await supabase
+        .from('organisations')
+        .select('id')
+        .limit(1);
 
-       if (orgs && orgs.length > 0) {
-         const { error: userOrgError } = await supabase
-           .from('user_organizations')
-           .insert({
-             user_id: authData.user.id,
-             organization_id: orgs[0].id,
-             role: 'superadmin'
-           } as any);
+      if (orgs && orgs.length > 0) {
+        const { error: userOrgError } = await supabase
+          .from('user_organizations')
+          .insert({
+            user_id: user.id,
+            organization_id: orgs[0].id,
+            role: 'superadmin'
+          });
 
-         if (userOrgError) {
-           console.error('Erreur création relation user_organizations:', userOrgError);
-         }
-       }
-
-       // 4. Connexion automatique de l'utilisateur
-       // Attendre un peu pour que l'utilisateur soit bien créé
-       await new Promise(resolve => setTimeout(resolve, 1000));
-       
-       const { error: signInError } = await signInWithEmailConfirmationBypass(
-         formData.email,
-         formData.password
-       );
-
-       if (signInError) {
-         // Si l'erreur est liée à l'email non confirmé, on peut l'ignorer en mode démo
-         if (signInError.message?.includes('Email not confirmed') || signInError.message?.includes('EMAIL_NOT_CONFIRMED_DEMO')) {
-           console.warn('Email non confirmé - Mode démo activé');
-           toast.success('Super-Admin créé avec succès ! Mode démo activé (email non confirmé)');
-         } else {
-           console.warn('Connexion automatique échouée:', signInError);
-           toast.warning('Super-Admin créé mais connexion automatique échouée. Veuillez vous connecter manuellement.');
-         }
-       } else {
-         toast.success('Super-Admin créé avec succès !');
-       }
-
-      onComplete({
-        user: authData.user,
-        profile: {
-          id: authData.user.id,
-          email: formData.email,
-          nom: formData.nom,
-          prenom: formData.prenom,
-          role: 'superadmin'
+        if (userOrgError) {
+          console.error('Erreur création relation user_organizations:', userOrgError);
         }
-      });
+      }
+
+      // 4. Passer à l'étape de confirmation email
+      setStep('email-sent');
+      toast.success('Compte créé ! Vérifiez votre email pour confirmer votre compte.');
+
     } catch (error: any) {
       console.error('Erreur création Super-Admin:', error);
-      
-      // Messages d'erreur plus spécifiques
-      let errorMessage = 'Erreur création Super-Admin';
-      if (error.message?.includes('Email not confirmed')) {
-        errorMessage = 'Email non confirmé. Vérifiez votre boîte mail ou contactez l\'administrateur.';
-      } else if (error.message?.includes('User already registered')) {
-        errorMessage = 'Un compte existe déjà avec cet email.';
-      } else if (error.message?.includes('Invalid email')) {
-        errorMessage = 'Format d\'email invalide.';
-      } else if (error.message?.includes('Password')) {
-        errorMessage = 'Mot de passe trop faible ou invalide.';
-      }
-      
-      toast.error(errorMessage);
+      toast.error(error.message || 'Erreur lors de la création du Super-Admin');
     } finally {
       setIsLoading(false);
     }
   };
+
+  const handleEmailConfirmed = () => {
+    setStep('completed');
+    onComplete({
+      user: { email: formData.email },
+      profile: {
+        email: formData.email,
+        nom: formData.nom,
+        prenom: formData.prenom,
+        role: 'superadmin'
+      }
+    });
+  };
+
+  if (step === 'email-sent') {
+    return (
+      <Dialog open={isOpen} onOpenChange={() => {}}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader className="text-center">
+            <div className="mx-auto mb-4 w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center">
+              <Mail className="w-8 h-8 text-blue-600" />
+            </div>
+            <DialogTitle className="text-2xl font-bold text-gray-900">
+              Vérifiez votre email
+            </DialogTitle>
+            <DialogDescription className="text-gray-600 mt-2">
+              Un email de confirmation a été envoyé à <strong>{formData.email}</strong>
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <Alert>
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                Cliquez sur le lien dans l'email pour activer votre compte Super-Admin.
+                Vérifiez aussi vos spams si vous ne recevez pas l'email.
+              </AlertDescription>
+            </Alert>
+
+            <div className="text-center space-y-2">
+              <p className="text-sm text-gray-600">
+                Une fois votre email confirmé, vous pourrez vous connecter avec :
+              </p>
+              <div className="bg-gray-50 p-3 rounded-lg text-sm">
+                <div><strong>Email :</strong> {formData.email}</div>
+                <div><strong>Rôle :</strong> Super-Administrateur</div>
+              </div>
+            </div>
+
+            <Button
+              onClick={handleEmailConfirmed}
+              className="w-full"
+              variant="outline"
+            >
+              J'ai confirmé mon email
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
 
   return (
     <Dialog open={isOpen} onOpenChange={() => {}}>
@@ -227,6 +256,7 @@ const SuperAdminSetupModal: React.FC<SuperAdminSetupModalProps> = ({ isOpen, onC
                       onChange={(e) => handleInputChange('prenom', e.target.value)}
                       className={`pl-10 ${errors.prenom ? 'border-red-500' : ''}`}
                       placeholder="Votre prénom"
+                      disabled={isLoading}
                     />
                   </div>
                   {errors.prenom && <p className="text-red-500 text-sm">{errors.prenom}</p>}
@@ -244,6 +274,7 @@ const SuperAdminSetupModal: React.FC<SuperAdminSetupModalProps> = ({ isOpen, onC
                       onChange={(e) => handleInputChange('nom', e.target.value)}
                       className={`pl-10 ${errors.nom ? 'border-red-500' : ''}`}
                       placeholder="Votre nom"
+                      disabled={isLoading}
                     />
                   </div>
                   {errors.nom && <p className="text-red-500 text-sm">{errors.nom}</p>}
@@ -263,6 +294,7 @@ const SuperAdminSetupModal: React.FC<SuperAdminSetupModalProps> = ({ isOpen, onC
                     onChange={(e) => handleInputChange('email', e.target.value)}
                     className={`pl-10 ${errors.email ? 'border-red-500' : ''}`}
                     placeholder="votre@email.com"
+                    disabled={isLoading}
                   />
                 </div>
                 {errors.email && <p className="text-red-500 text-sm">{errors.email}</p>}
@@ -281,6 +313,7 @@ const SuperAdminSetupModal: React.FC<SuperAdminSetupModalProps> = ({ isOpen, onC
                     onChange={(e) => handleInputChange('phone', e.target.value)}
                     className={`pl-10 ${errors.phone ? 'border-red-500' : ''}`}
                     placeholder="+225 XX XX XX XX XX"
+                    disabled={isLoading}
                   />
                 </div>
                 {errors.phone && <p className="text-red-500 text-sm">{errors.phone}</p>}
@@ -299,6 +332,7 @@ const SuperAdminSetupModal: React.FC<SuperAdminSetupModalProps> = ({ isOpen, onC
                     onChange={(e) => handleInputChange('password', e.target.value)}
                     className={`pl-10 pr-10 ${errors.password ? 'border-red-500' : ''}`}
                     placeholder="••••••••"
+                    disabled={isLoading}
                   />
                   <Button
                     type="button"
@@ -306,6 +340,7 @@ const SuperAdminSetupModal: React.FC<SuperAdminSetupModalProps> = ({ isOpen, onC
                     size="sm"
                     className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
                     onClick={() => setShowPassword(!showPassword)}
+                    disabled={isLoading}
                   >
                     {showPassword ? (
                       <EyeOff className="h-4 w-4 text-green-500" />
@@ -330,6 +365,7 @@ const SuperAdminSetupModal: React.FC<SuperAdminSetupModalProps> = ({ isOpen, onC
                     onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
                     className={`pl-10 pr-10 ${errors.confirmPassword ? 'border-red-500' : ''}`}
                     placeholder="••••••••"
+                    disabled={isLoading}
                   />
                   <Button
                     type="button"
@@ -337,6 +373,7 @@ const SuperAdminSetupModal: React.FC<SuperAdminSetupModalProps> = ({ isOpen, onC
                     size="sm"
                     className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    disabled={isLoading}
                   >
                     {showConfirmPassword ? (
                       <EyeOff className="h-4 w-4 text-green-500" />
@@ -351,7 +388,7 @@ const SuperAdminSetupModal: React.FC<SuperAdminSetupModalProps> = ({ isOpen, onC
               <Alert className="border-green-200 bg-green-50 dark:bg-green-900/20 dark:border-green-700">
                 <AlertCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
                 <AlertDescription className="text-green-700 dark:text-green-300">
-                  Accès complet à toutes les organisations
+                  Un email de confirmation sera envoyé pour activer le compte
                 </AlertDescription>
               </Alert>
 

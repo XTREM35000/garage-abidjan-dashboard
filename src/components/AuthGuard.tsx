@@ -1,220 +1,220 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
-import OrganizationSelect from './OrganizationSelect';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { validateSession, checkUserPermissions } from '@/integrations/supabase/client';
+import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
-type AuthState = 'loading' | 'unauthenticated' | 'authenticated' | 'selecting-org';
+// États d'authentification
+export enum AuthState {
+  LOADING = 'LOADING',
+  UNAUTHENTICATED = 'UNAUTHENTICATED',
+  AUTHENTICATED = 'AUTHENTICATED',
+  ORG_REQUIRED = 'ORG_REQUIRED'
+}
 
 interface AuthGuardProps {
   children: React.ReactNode;
+  requireAuth?: boolean;
+  requireOrganization?: boolean;
+  allowedRoles?: string[];
 }
 
-const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
-  const [authState, setAuthState] = useState<AuthState>('loading');
-  const [currentUser, setCurrentUser] = useState<any>(null);
-  const [selectedOrg, setSelectedOrg] = useState<any>(null);
+interface AuthData {
+  user: any;
+  session: any;
+  organizations: any[];
+  currentOrganization?: any;
+  userRole?: string;
+}
+
+const AuthGuard: React.FC<AuthGuardProps> = ({ 
+  children, 
+  requireAuth = true,
+  requireOrganization = false,
+  allowedRoles = []
+}) => {
+  const [authState, setAuthState] = useState<AuthState>(AuthState.LOADING);
+  const [authData, setAuthData] = useState<AuthData | null>(null);
   const navigate = useNavigate();
+  const location = useLocation();
 
-  // Single useEffect to handle all auth logic
-  useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        // Check for existing session
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+  const checkAuthentication = async () => {
+    try {
+      setAuthState(AuthState.LOADING);
+
+      // 1. Valider la session
+      const sessionResult = await validateSession();
+      
+      if (!sessionResult.isValid || !sessionResult.user) {
+        setAuthState(AuthState.UNAUTHENTICATED);
         
-        if (sessionError) {
-          console.error('Session error:', sessionError);
-          setAuthState('unauthenticated');
+        if (requireAuth) {
+          // Sauvegarder l'URL actuelle pour redirection après connexion
+          const redirectUrl = encodeURIComponent(location.pathname + location.search);
+          navigate(`/auth?redirect=${redirectUrl}`);
           return;
         }
-
-        if (!session) {
-          setAuthState('unauthenticated');
-          return;
-        }
-
-        // Get current user
-        const { data: { user }, error: userError } = await supabase.auth.getUser();
         
-        if (userError || !user) {
-          console.error('User error:', userError);
-          setAuthState('unauthenticated');
+        setAuthData(null);
+        return;
+      }
+
+      // 2. Vérifier les permissions et organisations
+      const permissionsResult = await checkUserPermissions(sessionResult.user.id);
+      
+      const authDataResult: AuthData = {
+        user: sessionResult.user,
+        session: sessionResult.session,
+        organizations: permissionsResult.organizations || [],
+        currentOrganization: null,
+        userRole: undefined
+      };
+
+      // 3. Gérer les organisations
+      if (requireOrganization) {
+        if (!permissionsResult.hasAccess || authDataResult.organizations.length === 0) {
+          setAuthState(AuthState.ORG_REQUIRED);
+          setAuthData(authDataResult);
+          navigate('/create-organisation');
           return;
         }
 
-        setCurrentUser(user);
+        // Vérifier l'organisation courante
+        const storedOrgId = localStorage.getItem('current_org');
+        let currentOrg = null;
+        let userRole = undefined;
 
-        // Check if user has a current organization in localStorage
-        const storedOrg = localStorage.getItem('current_org');
-        const storedOrgCode = localStorage.getItem('org_code');
-
-        if (storedOrg && storedOrgCode) {
-          // Validate the stored organization access
-          const { data: isValid, error: validationError } = await supabase.rpc('validate_org_access', {
-            org_id: storedOrg,
-            user_id: user.id,
-            org_code: storedOrgCode
-          });
-
-          if (!validationError && isValid) {
-            setSelectedOrg({ id: storedOrg, code: storedOrgCode });
-            setAuthState('authenticated');
-            return;
+        if (storedOrgId) {
+          // Vérifier l'accès à l'organisation stockée
+          const orgPermissions = await checkUserPermissions(sessionResult.user.id, storedOrgId);
+          
+          if (orgPermissions.hasAccess) {
+            currentOrg = orgPermissions.organization;
+            userRole = orgPermissions.role;
           } else {
-            // Clear invalid stored data
+            // Supprimer l'organisation invalide du localStorage
             localStorage.removeItem('current_org');
             localStorage.removeItem('org_code');
           }
         }
 
-        // User is authenticated but needs to select organization
-        setAuthState('selecting-org');
+        // Si pas d'organisation courante valide, utiliser la première disponible
+        if (!currentOrg && authDataResult.organizations.length > 0) {
+          const firstOrg = authDataResult.organizations[0];
+          currentOrg = firstOrg.organisations;
+          userRole = firstOrg.role;
+          
+          // Sauvegarder dans localStorage
+          localStorage.setItem('current_org', currentOrg.id);
+          localStorage.setItem('org_code', currentOrg.code || '');
+        }
 
-      } catch (error) {
-        console.error('Auth check error:', error);
-        setAuthState('unauthenticated');
-      }
-    };
+        // Si l'utilisateur a plusieurs organisations mais aucune sélectionnée
+        if (!currentOrg && authDataResult.organizations.length > 1) {
+          setAuthState(AuthState.ORG_REQUIRED);
+          setAuthData(authDataResult);
+          navigate('/select-organisation');
+          return;
+        }
 
-    checkAuth();
-  }, []);
-
-  // Handle navigation when unauthenticated
-  useEffect(() => {
-    if (authState === 'unauthenticated') {
-      navigate('/auth');
-    }
-  }, [authState, navigate]);
-
-  const handleOrgSelect = async (orgId: string, orgCode: string) => {
-    try {
-      // Validate organization access
-      const { data: isValid, error } = await supabase.rpc('validate_org_access', {
-        org_id: orgId,
-        user_id: currentUser.id,
-        org_code: orgCode
-      });
-
-      if (error || !isValid) {
-        toast.error('Code d\'accès invalide ou accès refusé');
-        return;
+        authDataResult.currentOrganization = currentOrg;
+        authDataResult.userRole = userRole;
       }
 
-      // Store organization info
-      localStorage.setItem('current_org', orgId);
-      localStorage.setItem('org_code', orgCode);
-      
-      setSelectedOrg({ id: orgId, code: orgCode });
-      setAuthState('authenticated');
-      
-      toast.success('Organisation sélectionnée avec succès !');
+      // 4. Vérifier les rôles requis
+      if (allowedRoles.length > 0 && authDataResult.userRole) {
+        if (!allowedRoles.includes(authDataResult.userRole)) {
+          toast.error('Vous n\'avez pas les permissions nécessaires pour accéder à cette page.');
+          navigate('/dashboard');
+          return;
+        }
+      }
+
+      // 5. Authentification réussie
+      setAuthData(authDataResult);
+      setAuthState(AuthState.AUTHENTICATED);
 
     } catch (error) {
-      console.error('Organization selection error:', error);
-      toast.error('Erreur lors de la sélection de l\'organisation');
+      console.error('Erreur lors de la vérification d\'authentification:', error);
+      setAuthState(AuthState.UNAUTHENTICATED);
+      setAuthData(null);
+      
+      if (requireAuth) {
+        toast.error('Session expirée. Veuillez vous reconnecter.');
+        navigate('/auth');
+      }
     }
   };
 
-  const handleLogout = async () => {
+  const handleOrganizationChange = async (organizationId: string) => {
+    if (!authData?.user) return;
+
     try {
-      await supabase.auth.signOut();
-      localStorage.removeItem('current_org');
-      localStorage.removeItem('org_code');
-      setAuthState('unauthenticated');
-      setCurrentUser(null);
-      setSelectedOrg(null);
-      toast.success('Déconnexion réussie');
-    } catch (error) {
-      console.error('Logout error:', error);
-      toast.error('Erreur lors de la déconnexion');
-    }
-  };
-
-  // Always render something to avoid conditional rendering issues
-  if (authState === 'loading') {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Vérification de l'authentification...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (authState === 'unauthenticated') {
-    // Return a loading state while navigation happens
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Redirection vers la page de connexion...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (authState === 'selecting-org') {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
-        <div className="bg-white rounded-lg shadow-xl p-8 max-w-md w-full">
-          <div className="text-center mb-6">
-            <h2 className="text-2xl font-bold text-gray-800 mb-2">
-              Sélectionnez votre organisation
-            </h2>
-            <p className="text-gray-600">
-              Choisissez l'organisation à laquelle vous souhaitez accéder
-            </p>
-          </div>
-
-          <OrganizationSelect
-            onSelect={handleOrgSelect}
-          />
-
-          <div className="mt-6 pt-6 border-t border-gray-200">
-            <button
-              onClick={handleLogout}
-              className="w-full px-4 py-2 text-sm text-red-600 hover:text-red-700 hover:bg-red-50 rounded-md transition-colors"
-            >
-              Se déconnecter
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (authState === 'authenticated' && selectedOrg) {
-    return (
-      <div>
-        {/* Optional: Add a header with logout button */}
-        <div className="bg-white border-b border-gray-200 px-4 py-2 flex justify-between items-center">
-          <div className="text-sm text-gray-600">
-            Connecté en tant que {currentUser?.email}
-          </div>
-          <button
-            onClick={handleLogout}
-            className="px-3 py-1 text-sm text-red-600 hover:text-red-700 hover:bg-red-50 rounded transition-colors"
-          >
-            Déconnexion
-          </button>
-        </div>
+      const permissions = await checkUserPermissions(authData.user.id, organizationId);
+      
+      if (permissions.hasAccess) {
+        localStorage.setItem('current_org', organizationId);
+        localStorage.setItem('org_code', permissions.organization?.code || '');
         
-        {/* Render the main content */}
-        {children}
+        // Recharger les données d'authentification
+        await checkAuthentication();
+        
+        toast.success(`Organisation changée: ${permissions.organization?.nom}`);
+      } else {
+        toast.error('Vous n\'avez pas accès à cette organisation.');
+      }
+    } catch (error) {
+      console.error('Erreur changement organisation:', error);
+      toast.error('Erreur lors du changement d\'organisation.');
+    }
+  };
+
+  const signOut = () => {
+    localStorage.removeItem('current_org');
+    localStorage.removeItem('org_code');
+    setAuthData(null);
+    setAuthState(AuthState.UNAUTHENTICATED);
+    navigate('/auth');
+  };
+
+  useEffect(() => {
+    checkAuthentication();
+  }, [location.pathname]);
+
+  // Écran de chargement
+  if (authState === AuthState.LOADING) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto text-blue-600" />
+          <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+            Vérification de l'authentification...
+          </p>
+        </div>
       </div>
     );
   }
 
-  // Fallback - should not be reached
-  return (
-    <div className="min-h-screen flex items-center justify-center">
-      <div className="text-center">
-        <p className="text-gray-600">État d'authentification inconnu</p>
-      </div>
-    </div>
-  );
+  // Si pas d'authentification requise, afficher le contenu
+  if (!requireAuth) {
+    return <>{children}</>;
+  }
+
+  // Si authentifié, passer les données d'auth aux enfants
+  if (authState === AuthState.AUTHENTICATED) {
+    return (
+      <>
+        {React.cloneElement(children as React.ReactElement, {
+          authData,
+          onOrganizationChange: handleOrganizationChange,
+          onSignOut: signOut
+        })}
+      </>
+    );
+  }
+
+  // Les autres états (UNAUTHENTICATED, ORG_REQUIRED) sont gérés par les redirections
+  return null;
 };
 
 export default AuthGuard; 
