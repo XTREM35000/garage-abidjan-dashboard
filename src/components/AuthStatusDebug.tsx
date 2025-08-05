@@ -1,12 +1,23 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useSimpleAuth } from '@/hooks/useSimpleAuth';
-import { Shield, User, Building, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { Shield, CheckCircle, XCircle, AlertCircle, RefreshCw } from 'lucide-react';
 
-const AuthStatusDebug: React.FC = () => {
+interface DebugInfo {
+  session: any;
+  user: any;
+  isConnected: boolean;
+  timestamp: string;
+  error?: any;
+}
+
+const AuthStatusDebugComponent: React.FC = () => {
   const { user, isAuthenticated, isLoading } = useSimpleAuth();
+  const [debugInfo, setDebugInfo] = useState<DebugInfo | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
 
   const getStatusIcon = (status: boolean) => {
     return status ? (
@@ -24,6 +35,36 @@ const AuthStatusDebug: React.FC = () => {
       </Badge>
     );
   };
+
+  const handleRefreshDebugInfo = async () => {
+    setRefreshing(true);
+    try {
+      const { data: session } = await supabase.auth.getSession();
+      const { data: userData } = await supabase.auth.getUser();
+      
+      setDebugInfo({
+        session: session.session,
+        user: userData.user,
+        isConnected: !!session.session,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('Erreur lors du débogage:', error);
+      setDebugInfo({
+        session: null,
+        user: null,
+        isConnected: false,
+        timestamp: new Date().toISOString(),
+        error: error
+      });
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
+    handleRefreshDebugInfo();
+  }, []);
 
   return (
     <div className="space-y-4">
@@ -72,9 +113,17 @@ const AuthStatusDebug: React.FC = () => {
               </div>
             </div>
           </div>
+
+          {debugInfo && (
+            <div className="mt-4 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+              <h5 className="font-medium mb-2">Informations de débogage</h5>
+              <pre className="text-xs overflow-auto max-h-40">
+                {JSON.stringify(debugInfo, null, 2)}
+              </pre>
+            </div>
+          )}
         </CardContent>
       </Card>
-
 
       <Card>
         <CardHeader>
@@ -93,6 +142,19 @@ const AuthStatusDebug: React.FC = () => {
               }}
             >
               Log State
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleRefreshDebugInfo}
+              disabled={refreshing}
+            >
+              {refreshing ? (
+                <RefreshCw className="w-4 h-4 animate-spin mr-2" />
+              ) : (
+                <RefreshCw className="w-4 h-4 mr-2" />
+              )}
+              Actualiser Debug
             </Button>
             <Button
               variant="outline"
@@ -129,4 +191,4 @@ const AuthStatusDebug: React.FC = () => {
   );
 };
 
-export default AuthStatusDebug;
+export default AuthStatusDebugComponent;
