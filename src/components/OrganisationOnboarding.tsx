@@ -4,22 +4,29 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Building2, Mail, User, Key } from 'lucide-react';
+import { Building2, Mail, User, Key, AlertCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import PricingModal from '@/components/PricingModal';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface Props {
   isOpen: boolean;
   onComplete: (organisationId: string) => void;
-  plan?: string; // Ajout du plan sélectionné
-  showPricingFirst?: boolean; // Afficher d'abord le pricing modal
+  plan?: string;
+  showPricingFirst?: boolean;
 }
 
-export const OrganisationOnboarding: React.FC<Props> = ({ isOpen, onComplete, plan, showPricingFirst = false }) => {
+export const OrganisationOnboarding: React.FC<Props> = ({
+  isOpen,
+  onComplete,
+  plan,
+  showPricingFirst = false
+}) => {
   const [currentStep, setCurrentStep] = useState(showPricingFirst ? 'pricing' : 'organisation');
-  const [selectedPlan, setSelectedPlan] = useState(plan || '');
+  const [selectedPlan, setSelectedPlan] = useState(plan || 'free');
   const [isLoading, setIsLoading] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [formData, setFormData] = useState({
     nom: '',
     slug: '',
@@ -28,52 +35,112 @@ export const OrganisationOnboarding: React.FC<Props> = ({ isOpen, onComplete, pl
   });
   const { toast } = useToast();
 
+  const validateForm = () => {
+    const newErrors: Record<string, string> = {};
+
+    if (!formData.nom) {
+      newErrors.nom = 'Le nom est requis';
+    }
+
+    if (!formData.adminEmail) {
+      newErrors.adminEmail = "L'email est requis";
+    } else if (!/\S+@\S+\.\S+/.test(formData.adminEmail)) {
+      newErrors.adminEmail = "Format d'email invalide";
+    }
+
+    if (!formData.adminPassword) {
+      newErrors.adminPassword = 'Le mot de passe est requis';
+    } else if (formData.adminPassword.length < 8) {
+      newErrors.adminPassword = 'Minimum 8 caractères';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
   const handlePlanSelection = (planId: string) => {
     setSelectedPlan(planId);
     setCurrentStep('organisation');
   };
 
+  const generateSlug = (name: string) => {
+    return name
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '');
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!validateForm()) return;
+
     setIsLoading(true);
 
     try {
-      // Générer le slug automatiquement si vide
-      const slug = formData.slug || formData.nom.toLowerCase()
-        .replace(/[^a-z0-9]/g, '-')
-        .replace(/-+/g, '-')
-        .replace(/^-|-$/g, '');
+      // 1. Créer l'utilisateur admin
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: formData.adminEmail,
+        password: formData.adminPassword,
+        options: {
+          data: {
+            full_name: `Admin ${formData.nom}`,
+            role: 'admin'
+          }
+        }
+      });
 
-      // Générer un code unique pour l'organisation
+      if (authError) throw authError;
+      if (!authData.user) throw new Error('Erreur lors de la création du compte administrateur');
+
+      // 2. Créer l'organisation
+      const slug = formData.slug || generateSlug(formData.nom);
       const code = slug.toUpperCase().substring(0, 6) + Date.now().toString().slice(-4);
 
-      // Créer l'organisation directement
       const { data: orgData, error: orgError } = await supabase
         .from('organisations')
         .insert({
           name: formData.nom,
-          code: code,
-          slug: slug,
+          code,
+          slug,
           email: formData.adminEmail,
           subscription_type: selectedPlan === 'annual' ? 'lifetime' : 'monthly',
-          is_active: true
+          is_active: true,
+          created_by: authData.user.id
         })
         .select()
         .single();
 
       if (orgError) throw orgError;
 
+      // 3. Lier l'utilisateur à l'organisation
+      const { error: userError } = await supabase
+        .from('users')
+        .insert({
+          auth_user_id: authData.user.id,
+          full_name: `Admin ${formData.nom}`,
+          email: formData.adminEmail,
+          role: 'admin',
+          is_active: true,
+          organisation_id: orgData.id
+        });
+
+      if (userError) throw userError;
+
       toast({
-        title: "Organisation créée avec succès",
-        description: `${formData.nom} a été créée ! Vous pouvez maintenant créer votre compte administrateur.`
+        title: 'Organisation créée avec succès',
+        description: `L'organisation ${formData.nom} et le compte administrateur ont été créés.`
       });
 
       onComplete(orgData.id);
     } catch (error: any) {
+      console.error('Erreur complète:', error);
       toast({
-        title: "Erreur lors de la création",
-        description: error.message || "Une erreur est survenue",
-        variant: "destructive"
+        title: 'Erreur lors de la création',
+        description: error.message || 'Une erreur est survenue',
+        variant: 'destructive'
       });
     } finally {
       setIsLoading(false);
@@ -82,21 +149,16 @@ export const OrganisationOnboarding: React.FC<Props> = ({ isOpen, onComplete, pl
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+    if (errors[field]) setErrors(prev => ({ ...prev, [field]: '' }));
   };
 
-  // Rendu selon l'étape
   if (currentStep === 'pricing') {
-    return (
-      <PricingModal 
-        isOpen={isOpen} 
-        onSelectPlan={handlePlanSelection}
-      />
-    );
+    return <PricingModal isOpen={isOpen} onSelectPlan={handlePlanSelection} />;
   }
 
   return (
     <Dialog open={isOpen} onOpenChange={() => {}}>
-              <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-center text-2xl font-bold flex items-center justify-center gap-2">
             <Building2 className="h-6 w-6 text-primary" />
@@ -120,8 +182,9 @@ export const OrganisationOnboarding: React.FC<Props> = ({ isOpen, onComplete, pl
                   value={formData.nom}
                   onChange={(e) => handleInputChange('nom', e.target.value)}
                   placeholder="Ex: Garage Central Abidjan"
-                  required
+                  className={errors.nom ? 'border-destructive' : ''}
                 />
+                {errors.nom && <p className="text-destructive text-sm mt-1">{errors.nom}</p>}
               </div>
 
               <div>
@@ -130,7 +193,7 @@ export const OrganisationOnboarding: React.FC<Props> = ({ isOpen, onComplete, pl
                   id="slug"
                   value={formData.slug}
                   onChange={(e) => handleInputChange('slug', e.target.value)}
-                  placeholder="garage-central-abidjan (généré automatiquement)"
+                  placeholder={generateSlug(formData.nom) || "garage-central-abidjan"}
                 />
                 <p className="text-xs text-muted-foreground mt-1">
                   Utilisé pour l'URL. Laissez vide pour génération automatique.
@@ -158,8 +221,9 @@ export const OrganisationOnboarding: React.FC<Props> = ({ isOpen, onComplete, pl
                   value={formData.adminEmail}
                   onChange={(e) => handleInputChange('adminEmail', e.target.value)}
                   placeholder="admin@garagecentral.ci"
-                  required
+                  className={errors.adminEmail ? 'border-destructive' : ''}
                 />
+                {errors.adminEmail && <p className="text-destructive text-sm mt-1">{errors.adminEmail}</p>}
               </div>
 
               <div>
@@ -173,31 +237,33 @@ export const OrganisationOnboarding: React.FC<Props> = ({ isOpen, onComplete, pl
                   value={formData.adminPassword}
                   onChange={(e) => handleInputChange('adminPassword', e.target.value)}
                   placeholder="Mot de passe sécurisé"
-                  required
-                  minLength={6}
+                  className={errors.adminPassword ? 'border-destructive' : ''}
                 />
+                {errors.adminPassword && <p className="text-destructive text-sm mt-1">{errors.adminPassword}</p>}
               </div>
             </CardContent>
           </Card>
 
-          <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
-            <h4 className="font-semibold text-blue-900 dark:text-blue-100 mb-2">
-              Que se passe-t-il ensuite ?
-            </h4>
-            <ul className="text-sm text-blue-800 dark:text-blue-200 space-y-1">
-              <li>• Votre organisation sera créée avec un plan starter</li>
-              <li>• Vous serez redirigé vers la page d'inscription</li>
-              <li>• Vous pourrez créer votre compte administrateur</li>
-              <li>• Vous aurez accès à 1Go de stockage et 5 utilisateurs</li>
-            </ul>
-          </div>
+          <Alert>
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              Plan sélectionné : <span className="font-semibold capitalize">{selectedPlan}</span>
+            </AlertDescription>
+          </Alert>
 
           <Button
             type="submit"
             className="w-full"
-            disabled={isLoading || !formData.nom || !formData.adminEmail || !formData.adminPassword}
+            disabled={isLoading}
           >
-            {isLoading ? 'Création en cours...' : 'Créer mon organisation'}
+            {isLoading ? (
+              <span className="flex items-center gap-2">
+                <span className="animate-spin">↻</span>
+                Création en cours...
+              </span>
+            ) : (
+              'Créer mon organisation'
+            )}
           </Button>
         </form>
       </DialogContent>

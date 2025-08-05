@@ -117,6 +117,7 @@ export type Database = {
       }
       organisations: {
         Row: {
+          access_code: string | null
           address: string | null
           city: string | null
           code: string
@@ -134,6 +135,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          access_code?: string | null
           address?: string | null
           city?: string | null
           code: string
@@ -151,6 +153,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          access_code?: string | null
           address?: string | null
           city?: string | null
           code?: string
@@ -507,6 +510,48 @@ export type Database = {
           },
         ]
       }
+      user_organizations: {
+        Row: {
+          id: string
+          user_id: string
+          organization_id: string
+          role: string
+          created_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          organization_id: string
+          role?: string
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          organization_id?: string
+          role?: string
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_organizations_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_organizations_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organisations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       vehicles: {
         Row: {
           brand: string | null
@@ -604,6 +649,14 @@ export type Database = {
       }
       is_super_admin: {
         Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
+      validate_org_access: {
+        Args: {
+          org_id: string
+          user_id: string
+          org_code: string
+        }
         Returns: boolean
       }
     }

@@ -3,13 +3,14 @@ import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
 import SplashScreen from '@/components/SplashScreen';
 import InitializationWizard from '@/components/InitializationWizard';
+import AuthGuard from '@/components/AuthGuard';
 import { toast } from 'sonner';
 
 interface WorkflowGuardProps {
   children: React.ReactNode;
 }
 
-type WorkflowStep = 
+type WorkflowStep =
   | 'loading'
   | 'initialization'
   | 'redirect-auth'
@@ -27,11 +28,18 @@ const WorkflowGuard: React.FC<WorkflowGuardProps> = ({ children }) => {
     checkWorkflowConditions();
   }, []);
 
+  // Gestion de l'authentification
+  const handleAuthSuccess = (user: any) => {
+    console.log('✅ Utilisateur connecté:', user);
+    // Recharger le workflow
+    checkWorkflowConditions();
+  };
+
   const checkWorkflowConditions = async () => {
     try {
       setIsLoading(true);
       console.log('🔄 Démarrage du workflow de vérification...');
-      
+
       // 1. Vérifier si Super-Admin existe
       const superAdminExists = await checkSuperAdminExists();
       if (!superAdminExists) {
@@ -41,7 +49,7 @@ const WorkflowGuard: React.FC<WorkflowGuardProps> = ({ children }) => {
         setIsLoading(false);
         return;
       }
-      
+
       // 2. Vérifier si des organisations existent
       const organisationExists = await checkOrganisationExists();
       if (!organisationExists) {
@@ -51,7 +59,7 @@ const WorkflowGuard: React.FC<WorkflowGuardProps> = ({ children }) => {
         setIsLoading(false);
         return;
       }
-      
+
       // 3. Vérifier si utilisateur connecté
       const userConnected = await checkUserConnection();
       if (!userConnected) {
@@ -59,7 +67,7 @@ const WorkflowGuard: React.FC<WorkflowGuardProps> = ({ children }) => {
         setIsLoading(false);
         return;
       }
-      
+
       // Workflow complet
       console.log('🎉 Workflow complet, accès au Dashboard autorisé');
       setCurrentStep('complete');
@@ -74,23 +82,18 @@ const WorkflowGuard: React.FC<WorkflowGuardProps> = ({ children }) => {
     }
   };
 
+
   const checkSuperAdminExists = async () => {
-    console.log('🔍 Vérification Super-Admin...');
     try {
-      const { count, error } = await supabase
+      const { data, error } = await supabase
         .from('super_admins')
-        .select('*', { count: 'exact', head: true });
+        .select('id')
+        .limit(1);
 
-      if (error) {
-        console.error('❌ Erreur Super-Admin:', error);
-        return false;
-      }
-
-      const exists = count && count > 0;
-      console.log(exists ? `✅ ${count} Super-Admin(s) trouvé(s)` : '⚠️ Aucun Super-Admin trouvé');
-      return exists;
+      if (error) throw error;
+      return (data?.length || 0) > 0;
     } catch (error) {
-      console.error('❌ Erreur lors de la vérification Super-Admin:', error);
+      console.error('Erreur vérification Super-Admin:', error);
       return false;
     }
   };
@@ -116,6 +119,25 @@ const WorkflowGuard: React.FC<WorkflowGuardProps> = ({ children }) => {
     }
   };
 
+  const checkUserConnection = async () => {
+    console.log('🔍 Vérification connexion utilisateur...');
+    try {
+      const { data: { user }, error } = await supabase.auth.getUser();
+
+      if (error) {
+        console.error('❌ Erreur vérification utilisateur:', error);
+        return false;
+      }
+
+      const isConnected = !!user;
+      console.log(isConnected ? '✅ Utilisateur connecté' : '⚠️ Aucun utilisateur connecté');
+      return isConnected;
+    } catch (error) {
+      console.error('❌ Erreur lors de la vérification utilisateur:', error);
+      return false;
+    }
+  };
+
   const checkAdminExists = async () => {
     console.log('🔍 Vérification Utilisateurs Admin...');
     try {
@@ -134,24 +156,6 @@ const WorkflowGuard: React.FC<WorkflowGuardProps> = ({ children }) => {
       return exists;
     } catch (error) {
       console.error('❌ Erreur lors de la vérification Admin:', error);
-      return false;
-    }
-  };
-
-  const checkUserConnection = async () => {
-    console.log('🔍 Vérification Connexion Utilisateur...');
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (!user) {
-        console.log('⚠️ Aucun utilisateur connecté');
-        return false;
-      }
-
-      console.log(`✅ Utilisateur connecté: ${user.email}`);
-      return true;
-    } catch (error) {
-      console.error('❌ Erreur lors de la vérification connexion:', error);
       return false;
     }
   };
@@ -179,9 +183,11 @@ const WorkflowGuard: React.FC<WorkflowGuardProps> = ({ children }) => {
       );
 
     case 'redirect-auth':
-      // Redirection immédiate vers /auth  
-      navigate('/auth');
-      return <SplashScreen onComplete={() => {}} />;
+      return (
+        <div>
+          <AuthGuard>{children}</AuthGuard>
+        </div>
+      );
 
     case 'complete':
     default:

@@ -8,6 +8,7 @@ import { supabase } from '@/integrations/supabase/client';
 
 // Pages
 import Index from '@/pages/Index';
+import AuthPage from '@/pages/AuthPage';
 import Auth from '@/pages/Auth';
 import Connexion from '@/pages/Connexion';
 import Dashboard from '@/pages/Dashboard';
@@ -130,7 +131,7 @@ const AppContent = () => {
         {/* =================== AUTHENTIFICATION (sans layout) =================== */}
         <Route path="/auth" element={
           <SimpleAuthGuard requireAuth={false}>
-            <Auth />
+            <AuthPage />
           </SimpleAuthGuard>
         } />
         <Route path="/connexion" element={

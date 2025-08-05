@@ -87,51 +87,74 @@ const SuperAdminSetupModal: React.FC<SuperAdminSetupModalProps> = ({ isOpen, onC
     setIsLoading(true);
 
     try {
+      // 1. Création du compte auth SANS metadata pour éviter les triggers
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: formData.email,
-        password: formData.password,
-        options: {
-          data: {
-            nom: formData.nom,
-            prenom: formData.prenom,
-            phone: formData.phone,
-            role: 'superadmin'
-          }
-        }
+        password: formData.password
       });
 
       if (authError) throw authError;
+      if (!authData.user) throw new Error('User creation failed');
 
-      if (authData.user) {
-        await supabase.from('super_admins').insert({
+      // 2. Création dans super_admins
+      const { error: insertError } = await supabase
+        .from('super_admins')
+        .insert({
           user_id: authData.user.id,
           email: formData.email,
           nom: formData.nom,
           prenom: formData.prenom,
           phone: formData.phone,
           est_actif: true
-        });
+        } as any);
 
-        await supabase.from('users').insert({
-          auth_user_id: authData.user.id,
-          full_name: `${formData.prenom} ${formData.nom}`,
-          phone: formData.phone,
-          role: 'superadmin',
-          is_active: true
-        });
-
-        toast.success('Super-Admin créé avec succès !');
-        onComplete({
-          user: authData.user,
-          profile: {
-            id: authData.user.id,
-            email: formData.email,
-            nom: formData.nom,
-            prenom: formData.prenom,
-            role: 'superadmin'
-          }
-        });
+      if (insertError) {
+        console.error('Erreur insertion super_admins:', insertError);
+        throw insertError;
       }
+
+             // 3. Créer la relation user_organizations pour le Super-Admin
+       const { data: orgs } = await supabase
+         .from('organisations')
+         .select('id')
+         .limit(1);
+
+       if (orgs && orgs.length > 0) {
+         const { error: userOrgError } = await supabase
+           .from('user_organizations')
+           .insert({
+             user_id: authData.user.id,
+             organization_id: orgs[0].id,
+             role: 'superadmin'
+           } as any);
+
+         if (userOrgError) {
+           console.error('Erreur création relation user_organizations:', userOrgError);
+         }
+       }
+
+       // 4. Connexion automatique de l'utilisateur
+       const { error: signInError } = await supabase.auth.signInWithPassword({
+         email: formData.email,
+         password: formData.password
+       });
+
+       if (signInError) {
+         console.warn('Connexion automatique échouée:', signInError);
+         // L'utilisateur devra se connecter manuellement
+       }
+
+      toast.success('Super-Admin créé avec succès !');
+      onComplete({
+        user: authData.user,
+        profile: {
+          id: authData.user.id,
+          email: formData.email,
+          nom: formData.nom,
+          prenom: formData.prenom,
+          role: 'superadmin'
+        }
+      });
     } catch (error: any) {
       console.error('Erreur création Super-Admin:', error);
       toast.error(error.message || 'Erreur création Super-Admin');
