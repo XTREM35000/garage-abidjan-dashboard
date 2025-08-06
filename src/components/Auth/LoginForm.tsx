@@ -1,123 +1,69 @@
 import React, { useState } from 'react';
-import { Button } from '@/components/ui/button';
+import { Alert } from '@/components/ui/alert';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, Mail, Lock } from 'lucide-react';
-import { signInWithEmailConfirmationBypass } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
+import { Button } from '@/components/ui/button';
+import { Label} from '@/components/ui/label';
+import { handleLogin } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
 
-const LoginForm: React.FC = () => {
-  const [formData, setFormData] = useState({
-    email: '',
-    password: ''
-  });
-  const [isLoading, setIsLoading] = useState(false);
+const LoginForm = () => {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
+    setLoading(true);
     setError('');
 
     try {
-      const { data, error } = await signInWithEmailConfirmationBypass(
-        formData.email,
-        formData.password
-      );
+      const { error: authError } = await handleLogin(email, password);
 
-      if (error) {
-        // Handle special demo mode error
-        if (error.message?.includes('EMAIL_NOT_CONFIRMED_DEMO')) {
-          throw new Error('Email non confirmé. En mode démo, contactez l\'administrateur pour activer votre compte.');
-        }
-        throw error;
-      }
+      if (authError) throw authError;
 
-      if (data.user) {
-        toast.success('Connexion réussie !');
-        navigate('/dashboard');
-      }
-    } catch (error: any) {
-      console.error('Erreur de connexion:', error);
-
-      // Messages d'erreur plus spécifiques
-      let errorMessage = 'Erreur de connexion';
-      if (error.message?.includes('Email not confirmed')) {
-        errorMessage = 'Email non confirmé. Vérifiez votre boîte mail pour confirmer votre compte, ou contactez l\'administrateur en mode démo.';
-      } else if (error.message?.includes('Invalid login credentials')) {
-        errorMessage = 'Email ou mot de passe incorrect.';
-      } else if (error.message?.includes('Too many requests')) {
-        errorMessage = 'Trop de tentatives de connexion. Veuillez réessayer plus tard.';
-      } else if (error.message?.includes('Network')) {
-        errorMessage = 'Problème de connexion réseau. Vérifiez votre connexion internet.';
-      } else if (error.message) {
-        errorMessage = error.message;
-      }
-
-      setError(errorMessage);
-      toast.error(errorMessage);
+      navigate('/dashboard');
+    } catch (err) {
+      setError(err.message || 'Erreur de connexion');
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      {error && (
-        <Alert variant="destructive">
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
+    <form onSubmit={onSubmit} className="space-y-4">
+      {error && <Alert variant="destructive">{error}</Alert>}
 
       <div className="space-y-2">
-        <Label htmlFor="email">Email</Label>
-        <div className="relative">
-          <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-          <Input
-            id="email"
-            type="email"
-            value={formData.email}
-            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-            className="pl-10"
-            placeholder="votre.email@example.com"
-            required
-          />
-        </div>
+        <Label>Email</Label>
+        <Input
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          required
+        />
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="password">Mot de passe</Label>
-        <div className="relative">
-          <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-          <Input
-            id="password"
-            type="password"
-            value={formData.password}
-            onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-            className="pl-10"
-            placeholder="Votre mot de passe"
-            required
-          />
-        </div>
+        <Label>Mot de passe</Label>
+        <Input
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          required
+        />
       </div>
 
-      <Button
-        type="submit"
-        disabled={isLoading}
-        className="w-full"
-      >
-        {isLoading ? (
-          <>
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            Connexion...
-          </>
-        ) : (
-          'Se connecter'
-        )}
+      <Button type="submit" disabled={loading} className="w-full">
+        {loading ? 'Connexion...' : 'Se connecter'}
       </Button>
+
+      {import.meta.env.VITE_DEMO_MODE === 'true' && (
+        <div className="text-sm text-muted-foreground text-center">
+          Mode démo activé - la confirmation d'email est automatique
+        </div>
+      )}
     </form>
   );
 };

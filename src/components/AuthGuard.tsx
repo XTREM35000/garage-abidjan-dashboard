@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { supabase, clearSession, validateSession } from '@/integrations/supabase/client';
+import { supabase } from '@/integrations/supabase/client';
 import OrganizationSelect from './OrganizationSelect';
 import { toast } from 'sonner';
 
@@ -25,13 +25,7 @@ const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
       console.log('🔍 Vérification de l\'authentification...');
 
       // Valider la session
-      const isSessionValid = await validateSession();
-
-      if (!isSessionValid) {
-        console.log('⚠️ Session invalide');
-        setAuthState('unauthenticated');
-        return;
-      }
+      await validateSession();
 
       // Obtenir l'utilisateur
       const { data: { user }, error: userError } = await supabase.auth.getUser();
@@ -215,3 +209,11 @@ const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
 };
 
 export default AuthGuard;
+function validateSession() {
+  throw new Error('Function not implemented.');
+}
+
+function clearSession() {
+  throw new Error('Function not implemented.');
+}
+

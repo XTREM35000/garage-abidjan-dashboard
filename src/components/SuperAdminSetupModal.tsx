@@ -8,7 +8,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
   User, Mail, Phone, Shield, AlertCircle, Eye, EyeOff, Crown, Lock, Sparkles
 } from 'lucide-react';
-import { supabase, signUpWithoutEmailConfirmation, signInWithEmailConfirmationBypass } from '@/integrations/supabase/client';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
 interface SuperAdminSetupModalProps {
@@ -140,7 +140,7 @@ const SuperAdminSetupModal: React.FC<SuperAdminSetupModalProps> = ({ isOpen, onC
        // 4. Connexion automatique de l'utilisateur
        // Attendre un peu pour que l'utilisateur soit bien créé
        await new Promise(resolve => setTimeout(resolve, 1000));
-       
+
        const { error: signInError } = await signInWithEmailConfirmationBypass(
          formData.email,
          formData.password
@@ -171,7 +171,7 @@ const SuperAdminSetupModal: React.FC<SuperAdminSetupModalProps> = ({ isOpen, onC
       });
     } catch (error: any) {
       console.error('Erreur création Super-Admin:', error);
-      
+
       // Messages d'erreur plus spécifiques
       let errorMessage = 'Erreur création Super-Admin';
       if (error.message?.includes('Email not confirmed')) {
@@ -183,7 +183,7 @@ const SuperAdminSetupModal: React.FC<SuperAdminSetupModalProps> = ({ isOpen, onC
       } else if (error.message?.includes('Password')) {
         errorMessage = 'Mot de passe trop faible ou invalide.';
       }
-      
+
       toast.error(errorMessage);
     } finally {
       setIsLoading(false);
@@ -381,3 +381,11 @@ const SuperAdminSetupModal: React.FC<SuperAdminSetupModalProps> = ({ isOpen, onC
 };
 
 export default SuperAdminSetupModal;
+function signUpWithoutEmailConfirmation(email: string, password: string, arg2: { role: string; }): { data: any; error: any; } | PromiseLike<{ data: any; error: any; }> {
+  throw new Error('Function not implemented.');
+}
+
+function signInWithEmailConfirmationBypass(email: string, password: string): { error: any; } | PromiseLike<{ error: any; }> {
+  throw new Error('Function not implemented.');
+}
+

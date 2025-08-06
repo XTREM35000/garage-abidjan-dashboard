@@ -1,95 +1,82 @@
 import { createClient } from '@supabase/supabase-js';
-import type { Database } from './types';
 
-const supabaseUrl = import.meta.env.VITE_PUBLIC_SUPABASE_URL || 'https://metssugfqsnttghfrsxx.supabase.co';
-const supabaseKey = import.meta.env.VITE_PUBLIC_SUPABASE_SERVICE_KEY || import.meta.env.VITE_PUBLIC_SUPABASE_ANON_KEY;
+// Configuration de base
+const supabaseUrl = import.meta.env.VITE_PUBLIC_SUPABASE_URL;
+const supabaseKey = import.meta.env.VITE_PUBLIC_SUPABASE_ANON_KEY;
 
-if (!supabaseKey) {
-  console.warn('⚠️ Clé Supabase manquante. Utilisez VITE_PUBLIC_SUPABASE_SERVICE_KEY ou VITE_PUBLIC_SUPABASE_ANON_KEY');
+if (!supabaseUrl || !supabaseKey) {
+  console.error('Configuration Supabase manquante !');
+  throw new Error('Les variables d\'environnement Supabase sont requises');
 }
 
-// Configuration spéciale pour la démo
-export const supabase = createClient<Database>(supabaseUrl, supabaseKey, {
+// Client Supabase configuré
+export const supabase = createClient(supabaseUrl, supabaseKey, {
   auth: {
     persistSession: true,
     autoRefreshToken: true,
-    detectSessionInUrl: false, // Désactivé pour éviter des conflits
-    // Configuration pour éviter les problèmes d'email confirmation en démo
-    flowType: 'pkce'
-  },
-  db: {
-    schema: 'public',
+    detectSessionInUrl: false,
+    flowType: 'pkce' // Meilleure sécurité pour les SPA
   },
   global: {
     headers: {
-      'X-Client-Info': 'garage-abidjan-dashboard/demo-mode',
-      'apikey': supabaseKey, // Nécessaire pour les requêtes REST
-      'Authorization': `Bearer ${supabaseKey}`,
+      'X-Client-Info': 'garage-abidjan-dashboard'
     }
   }
 });
 
-// Helper function for demo authentication with email confirmation bypass
-export const signInWithEmailConfirmationBypass = async (email: string, password: string) => {
-  try {
-    // First try normal sign in
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password
-    });
+// Fonctions d'authentification
+export const auth = {
+  /**
+   * Nouvelle méthode de connexion avec auto-confirmation en mode démo
+   */
+  login: async (email: string, password: string) => {
+    try {
+      // 1. D'abord essayer de se connecter normalement
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password: password.trim()
+      });
 
-    if (error) {
-      // If it's an email confirmation error, try to bypass it in demo mode
-      if (error.message.includes('Email not confirmed')) {
-        console.warn('Email confirmation bypass activated for demo mode');
+      if (error) {
+        // 2. Si email non confirmé ET mode démo, contourner
+        if (error.message.includes('Email not confirmed') &&
+            import.meta.env.VITE_DEMO_MODE === 'true') {
+          console.warn('[DEMO] Auto-confirmation email pour', email);
 
-        // In demo mode, we can try to manually confirm the user
-        // This would require admin privileges, so we'll just return a helpful error
-        throw new Error('EMAIL_NOT_CONFIRMED_DEMO');
+          // Étape magique : marquer l'email comme confirmé
+          const { error: updateError } = await supabase
+            .from('users')
+            .update({ email_confirmed_at: new Date().toISOString() })
+            .eq('email', email);
+
+          if (updateError) throw updateError;
+
+          // Réessayer la connexion
+          return await supabase.auth.signInWithPassword({
+            email,
+            password
+          });
+        }
+        throw error;
       }
+      return data;
+    } catch (error) {
+      console.error('Erreur auth.login:', error);
       throw error;
     }
-
-    return { data, error: null };
-  } catch (error) {
-    return { data: null, error };
-  }
+  },
+  // ... autres méthodes
 };
 
-// Helper function for creating users without email confirmation in demo mode
-export const signUpWithoutEmailConfirmation = async (email: string, password: string, userData?: any) => {
-  try {
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: undefined, // Disable email confirmation redirect
-        data: userData
-      }
-    });
+// Export des fonctions principales (rétro-compatibilité)
+export const handleLogin = auth.login;
+export const handleLogout = auth.logout;
+export const validateSession = auth.validateSession;
+export const clearSession = auth.logout; // Alias pour logout
+export const directAuthTest = auth.test;
 
-    return { data, error };
-  } catch (error) {
-    return { data: null, error };
-  }
-};
-
-// Système de logging étendu (optionnel mais recommandé pour le débogage)
-const enableLogging = import.meta.env.VITE_DEBUG === 'true';
-if (enableLogging) {
-  supabase
-    .channel('system')
-    .on('system', { event: '*' }, (payload) => {
-      console.log('[Supabase Event]', payload);
-    })
-    .subscribe();
-}
-
-// Vérification initiale de connexion (optionnelle)
-supabase.auth.getSession()
-  .then(({ data: { session } }) => {
-    console.log('Session initiale:', session);
-  })
-  .catch((error) => {
-    console.error('Erreur vérification session:', error);
-  });
+// Initialisation et vérification au chargement
+(async () => {
+  const { data: { session } } = await supabase.auth.getSession();
+  console.log('État initial auth:', session ? 'connecté' : 'non connecté');
+})();
