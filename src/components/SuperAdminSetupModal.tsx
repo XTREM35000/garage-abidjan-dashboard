@@ -87,16 +87,39 @@ const SuperAdminSetupModal: React.FC<SuperAdminSetupModalProps> = ({ isOpen, onC
     setIsLoading(true);
 
     try {
-      // 1. Création du compte auth
-      const authData = await handleRealAuth.signUp(formData.email, formData.password);
-      
-      if (!authData.user) throw new Error('User creation failed');
+      let userId: string;
 
-      // 2. Création dans super_admins
+      // 1. Vérifier si l'utilisateur existe déjà
+      const { data: existingUsers } = await supabase.auth.admin.listUsers();
+      const existingUser = existingUsers.users?.find(user => user.email === formData.email);
+
+      if (existingUser) {
+        // Utiliser l'utilisateur existant
+        userId = existingUser.id;
+        console.log('Utilisateur existant trouvé, utilisation du compte:', formData.email);
+      } else {
+        // Créer un nouveau compte
+        const authData = await handleRealAuth.signUp(formData.email, formData.password);
+        if (!authData.user) throw new Error('User creation failed');
+        userId = authData.user.id;
+      }
+
+      // 2. Vérifier si l'utilisateur est déjà super admin
+      const { data: existingSuperAdmin } = await supabase
+        .from('super_admins')
+        .select('id')
+        .eq('user_id', userId)
+        .single();
+
+      if (existingSuperAdmin) {
+        throw new Error('Cet utilisateur est déjà Super-Admin');
+      }
+
+      // 3. Création dans super_admins
       const { error: insertError } = await supabase
         .from('super_admins')
         .insert({
-          user_id: authData.user.id,
+          user_id: userId,
           email: formData.email,
           nom: formData.nom,
           prenom: formData.prenom,
@@ -109,7 +132,7 @@ const SuperAdminSetupModal: React.FC<SuperAdminSetupModalProps> = ({ isOpen, onC
         throw insertError;
       }
 
-             // 3. Créer la relation user_organizations pour le Super-Admin
+       // 4. Créer la relation user_organizations pour le Super-Admin
        const { data: orgs } = await supabase
          .from('organisations')
          .select('id')
@@ -119,7 +142,7 @@ const SuperAdminSetupModal: React.FC<SuperAdminSetupModalProps> = ({ isOpen, onC
          const { error: userOrgError } = await supabase
            .from('user_organizations')
            .insert({
-             user_id: authData.user.id,
+             user_id: userId,
              organization_id: orgs[0].id,
              role: 'superadmin'
            } as any);
@@ -129,13 +152,13 @@ const SuperAdminSetupModal: React.FC<SuperAdminSetupModalProps> = ({ isOpen, onC
          }
        }
 
-       // 4. Message de succès
-       toast.success('Super-Admin créé avec succès ! Vous devrez confirmer votre email avant de vous connecter.');
+       // 5. Message de succès
+       toast.success('Super-Admin créé avec succès !');
 
       onComplete({
-        user: authData.user,
+        user: { id: userId, email: formData.email },
         profile: {
-          id: authData.user.id,
+          id: userId,
           email: formData.email,
           nom: formData.nom,
           prenom: formData.prenom,
