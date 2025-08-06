@@ -1,13 +1,8 @@
 import { createClient } from '@supabase/supabase-js';
 
 // Configuration de base
-const supabaseUrl = import.meta.env.VITE_PUBLIC_SUPABASE_URL;
-const supabaseKey = import.meta.env.VITE_PUBLIC_SUPABASE_ANON_KEY;
-
-if (!supabaseUrl || !supabaseKey) {
-  console.error('Configuration Supabase manquante !');
-  throw new Error('Les variables d\'environnement Supabase sont requises');
-}
+const supabaseUrl = 'https://metssugfqsnttghfrsxx.supabase.co';
+const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1ldHNzdWdmcXNudHRnaGZyc3h4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI4NDk5NjEsImV4cCI6MjA2ODQyNTk2MX0.Vc0yDgzSe6iAfgUHezVKQMm4qvzMRRjCIrTTndpE1k8';
 
 // Client Supabase configuré
 export const supabase = createClient(supabaseUrl, supabaseKey, {
