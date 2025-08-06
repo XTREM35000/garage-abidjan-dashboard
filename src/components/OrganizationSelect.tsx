@@ -63,7 +63,7 @@ const OrganizationSelect: React.FC<OrganizationSelectProps> = ({ onSelect }) => 
 
       const orgs = data?.map(item => item.organisation).filter(Boolean) || [];
       console.log(`✅ ${orgs.length} organisation(s) trouvée(s)`);
-      setOrganizations(orgs);
+      setOrganizations(orgs.flat());
 
     } catch (error) {
       console.error('❌ Erreur lors de la récupération:', error);

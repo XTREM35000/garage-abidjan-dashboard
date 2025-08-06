@@ -24,56 +24,74 @@ export const supabase = createClient(supabaseUrl, supabaseKey, {
   }
 });
 
-// Fonctions d'authentification
-export const auth = {
-  /**
-   * Nouvelle méthode de connexion avec auto-confirmation en mode démo
-   */
-  login: async (email: string, password: string) => {
-    try {
-      // 1. D'abord essayer de se connecter normalement
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: email.trim(),
-        password: password.trim()
-      });
-
-      if (error) {
-        // 2. Si email non confirmé ET mode démo, contourner
-        if (error.message.includes('Email not confirmed') &&
-            import.meta.env.VITE_DEMO_MODE === 'true') {
-          console.warn('[DEMO] Auto-confirmation email pour', email);
-
-          // Étape magique : marquer l'email comme confirmé
-          const { error: updateError } = await supabase
-            .from('users')
-            .update({ email_confirmed_at: new Date().toISOString() })
-            .eq('email', email);
-
-          if (updateError) throw updateError;
-
-          // Réessayer la connexion
-          return await supabase.auth.signInWithPassword({
-            email,
-            password
-          });
-        }
-        throw error;
+// Fonctions d'authentification réelles
+export const handleRealAuth = {
+  signUp: async (email: string, password: string) => {
+    const { data, error } = await supabase.auth.signUp({
+      email: email.trim(),
+      password: password.trim(),
+      options: { 
+        emailRedirectTo: `${window.location.origin}/auth/confirm` 
       }
-      return data;
-    } catch (error) {
-      console.error('Erreur auth.login:', error);
-      throw error;
-    }
+    });
+    if (error) throw new Error(formatAuthError(error));
+    return data;
   },
-  // ... autres méthodes
+
+  signIn: async (email: string, password: string) => {
+    const { data, error } = await supabase.auth.signInWithPassword({ 
+      email: email.trim(), 
+      password: password.trim() 
+    });
+    
+    if (error?.status === 400 && error.message.includes("Email not confirmed")) {
+      throw new Error("CONFIRM_EMAIL");
+    }
+    if (error) throw new Error(formatAuthError(error));
+    return data;
+  },
+
+  signOut: async () => {
+    const { error } = await supabase.auth.signOut();
+    if (error) throw new Error(formatAuthError(error));
+  },
+
+  validateSession: async () => {
+    const { data: { session }, error } = await supabase.auth.getSession();
+    if (error) throw new Error(formatAuthError(error));
+    return session;
+  },
+
+  resetPassword: async (email: string) => {
+    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+      redirectTo: `${window.location.origin}/auth/reset-password` 
+    });
+    if (error) throw new Error(formatAuthError(error));
+  }
+};
+
+// Helper pour formater les erreurs d'auth
+const formatAuthError = (error: any): string => {
+  if (error.message?.includes('Invalid login credentials')) {
+    return 'Email ou mot de passe incorrect';
+  }
+  if (error.message?.includes('Email not confirmed')) {
+    return 'Email non confirmé. Vérifiez votre boîte mail.';
+  }
+  if (error.message?.includes('User already registered')) {
+    return 'Un compte existe déjà avec cet email';
+  }
+  if (error.message?.includes('Password should be at least')) {
+    return 'Le mot de passe doit contenir au moins 6 caractères';
+  }
+  return error.message || 'Erreur d\'authentification';
 };
 
 // Export des fonctions principales (rétro-compatibilité)
-export const handleLogin = auth.login;
-export const handleLogout = auth.logout;
-export const validateSession = auth.validateSession;
-export const clearSession = auth.logout; // Alias pour logout
-export const directAuthTest = auth.test;
+export const handleLogin = handleRealAuth.signIn;
+export const handleLogout = handleRealAuth.signOut;
+export const validateSession = handleRealAuth.validateSession;
+export const clearSession = handleRealAuth.signOut;
 
 // Initialisation et vérification au chargement
 (async () => {

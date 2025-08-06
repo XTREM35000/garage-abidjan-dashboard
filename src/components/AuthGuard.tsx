@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase, validateSession, clearSession } from '@/integrations/supabase/client';
 import OrganizationSelect from './OrganizationSelect';
 import { toast } from 'sonner';
 
@@ -209,11 +209,4 @@ const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
 };
 
 export default AuthGuard;
-function validateSession() {
-  throw new Error('Function not implemented.');
-}
-
-function clearSession() {
-  throw new Error('Function not implemented.');
-}
 

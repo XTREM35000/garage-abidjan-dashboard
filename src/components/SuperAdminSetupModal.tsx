@@ -8,7 +8,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
   User, Mail, Phone, Shield, AlertCircle, Eye, EyeOff, Crown, Lock, Sparkles
 } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase, handleRealAuth } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
 interface SuperAdminSetupModalProps {
@@ -87,17 +87,9 @@ const SuperAdminSetupModal: React.FC<SuperAdminSetupModalProps> = ({ isOpen, onC
     setIsLoading(true);
 
     try {
-      // 1. Création du compte auth SANS metadata pour éviter les triggers
-      const { data: authData, error: authError } = await signUpWithoutEmailConfirmation(
-        formData.email,
-        formData.password,
-        { role: 'superadmin' }
-      );
-
-      if (authError) {
-        console.error('Erreur auth signup:', authError);
-        throw authError;
-      }
+      // 1. Création du compte auth
+      const authData = await handleRealAuth.signUp(formData.email, formData.password);
+      
       if (!authData.user) throw new Error('User creation failed');
 
       // 2. Création dans super_admins
@@ -137,27 +129,8 @@ const SuperAdminSetupModal: React.FC<SuperAdminSetupModalProps> = ({ isOpen, onC
          }
        }
 
-       // 4. Connexion automatique de l'utilisateur
-       // Attendre un peu pour que l'utilisateur soit bien créé
-       await new Promise(resolve => setTimeout(resolve, 1000));
-
-       const { error: signInError } = await signInWithEmailConfirmationBypass(
-         formData.email,
-         formData.password
-       );
-
-       if (signInError) {
-         // Si l'erreur est liée à l'email non confirmé, on peut l'ignorer en mode démo
-         if (signInError.message?.includes('Email not confirmed') || signInError.message?.includes('EMAIL_NOT_CONFIRMED_DEMO')) {
-           console.warn('Email non confirmé - Mode démo activé');
-           toast.success('Super-Admin créé avec succès ! Mode démo activé (email non confirmé)');
-         } else {
-           console.warn('Connexion automatique échouée:', signInError);
-           toast.warning('Super-Admin créé mais connexion automatique échouée. Veuillez vous connecter manuellement.');
-         }
-       } else {
-         toast.success('Super-Admin créé avec succès !');
-       }
+       // 4. Message de succès
+       toast.success('Super-Admin créé avec succès ! Vous devrez confirmer votre email avant de vous connecter.');
 
       onComplete({
         user: authData.user,
@@ -381,11 +354,4 @@ const SuperAdminSetupModal: React.FC<SuperAdminSetupModalProps> = ({ isOpen, onC
 };
 
 export default SuperAdminSetupModal;
-function signUpWithoutEmailConfirmation(email: string, password: string, arg2: { role: string; }): { data: any; error: any; } | PromiseLike<{ data: any; error: any; }> {
-  throw new Error('Function not implemented.');
-}
-
-function signInWithEmailConfirmationBypass(email: string, password: string): { error: any; } | PromiseLike<{ error: any; }> {
-  throw new Error('Function not implemented.');
-}
 

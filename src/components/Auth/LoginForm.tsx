@@ -3,7 +3,7 @@ import { Alert } from '@/components/ui/alert';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label} from '@/components/ui/label';
-import { handleLogin } from '@/integrations/supabase/client';
+import { handleRealAuth } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
 
 const LoginForm = () => {
@@ -11,21 +11,39 @@ const LoginForm = () => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showResendLink, setShowResendLink] = useState(false);
   const navigate = useNavigate();
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError('');
+    setShowResendLink(false);
 
     try {
-      const { error: authError } = await handleLogin(email, password);
-
-      if (authError) throw authError;
-
+      await handleRealAuth.signIn(email, password);
       navigate('/dashboard');
-    } catch (err) {
-      setError(err.message || 'Erreur de connexion');
+    } catch (err: any) {
+      if (err.message === 'CONFIRM_EMAIL') {
+        setError('Email non confirmé. Vérifiez votre boîte mail.');
+        setShowResendLink(true);
+      } else {
+        setError(err.message || 'Erreur de connexion');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResendConfirmation = async () => {
+    try {
+      setLoading(true);
+      await handleRealAuth.signUp(email, password);
+      setError('');
+      setShowResendLink(false);
+      alert('Email de confirmation renvoyé !');
+    } catch (err: any) {
+      setError(err.message || 'Erreur lors du renvoi');
     } finally {
       setLoading(false);
     }
@@ -59,9 +77,16 @@ const LoginForm = () => {
         {loading ? 'Connexion...' : 'Se connecter'}
       </Button>
 
-      {import.meta.env.VITE_DEMO_MODE === 'true' && (
-        <div className="text-sm text-muted-foreground text-center">
-          Mode démo activé - la confirmation d'email est automatique
+      {showResendLink && (
+        <div className="text-center">
+          <Button 
+            variant="link" 
+            onClick={handleResendConfirmation}
+            disabled={loading}
+            className="text-sm"
+          >
+            Renvoyer l'email de confirmation
+          </Button>
         </div>
       )}
     </form>

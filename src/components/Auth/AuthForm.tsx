@@ -1,60 +1,43 @@
-import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, Building, LogIn, UserPlus, Key, User, Shield, Plus, ImagePlus, Lock } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
-import { useNavigate } from 'react-router-dom';
-import { toast } from 'sonner';
+import React, { useState } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import LoginForm from './LoginForm';
 import RegisterForm from './RegisterForm';
-
-// Simplified auth form without organization dependency
+import { Building } from 'lucide-react';
 
 const AuthForm: React.FC = () => {
-  const [tab, setTab] = useState<'login' | 'register'>('login');
+  const [activeTab, setActiveTab] = useState<'login' | 'register'>('login');
 
   return (
-    <div className="w-full max-w-md">
-      <div className="text-center mb-8">
-        <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl shadow-lg mb-4">
-          <Lock className="w-8 h-8 text-white" />
-        </div>
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Accès Sécurisé</h1>
-        <p className="text-gray-600">
-          Connectez-vous à votre compte ou créez-en un nouveau.
-        </p>
-      </div>
-
-      <Card className="shadow-soft animate-fade-in">
-        <CardHeader>
-          <CardTitle>
-            <Tabs value={tab} onValueChange={(value) => setTab(value as 'login' | 'register')} className="w-full">
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="login">
-                  <LogIn className="mr-2 h-4 w-4" />
-                  Connexion
-                </TabsTrigger>
-                <TabsTrigger value="register">
-                  <UserPlus className="mr-2 h-4 w-4" />
-                  Inscription
-                </TabsTrigger>
-              </TabsList>
-            </Tabs>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center p-4">
+      <Card className="w-full max-w-md shadow-xl border-0 bg-white/80 backdrop-blur-sm">
+        <CardHeader className="text-center pb-6">
+          <div className="mx-auto mb-4 w-16 h-16 bg-gradient-to-r from-blue-500 to-cyan-600 rounded-full flex items-center justify-center">
+            <Building className="w-8 h-8 text-white" />
+          </div>
+          <CardTitle className="text-2xl font-bold text-slate-800">
+            Garage Management
           </CardTitle>
+          <p className="text-slate-600 text-sm">
+            Connectez-vous ou créez votre compte
+          </p>
         </CardHeader>
+
         <CardContent>
-          <TabsContent value={tab} className="m-0">
-            {tab === 'login' ? (
+          <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'login' | 'register')}>
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="login">Connexion</TabsTrigger>
+              <TabsTrigger value="register">Inscription</TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="login" className="mt-6">
               <LoginForm />
-            ) : (
-              <RegisterForm setTab={setTab} />
-            )}
-          </TabsContent>
+            </TabsContent>
+            
+            <TabsContent value="register" className="mt-6">
+              <RegisterForm setTab={setActiveTab} />
+            </TabsContent>
+          </Tabs>
         </CardContent>
       </Card>
     </div>
