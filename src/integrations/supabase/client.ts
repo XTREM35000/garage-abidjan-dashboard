@@ -1,95 +1,492 @@
 import { createClient } from '@supabase/supabase-js';
+import type { Database } from './types';
 
-// Configuration de base
-const supabaseUrl = 'https://metssugfqsnttghfrsxx.supabase.co';
-const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1ldHNzdWdmcXNudHRnaGZyc3h4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI4NDk5NjEsImV4cCI6MjA2ODQyNTk2MX0.Vc0yDgzSe6iAfgUHezVKQMm4qvzMRRjCIrTTndpE1k8';
+const supabaseUrl = import.meta.env.VITE_PUBLIC_SUPABASE_URL || 'https://metssugfqsnttghfrsxx.supabase.co';
+const supabaseKey = import.meta.env.VITE_PUBLIC_SUPABASE_SERVICE_KEY || import.meta.env.VITE_PUBLIC_SUPABASE_ANON_KEY;
 
-// Client Supabase configuré
-export const supabase = createClient(supabaseUrl, supabaseKey, {
+if (!supabaseKey) {
+  console.warn('⚠️ Clé Supabase manquante. Utilisez VITE_PUBLIC_SUPABASE_SERVICE_KEY ou VITE_PUBLIC_SUPABASE_ANON_KEY');
+  console.warn('📝 Créez un fichier .env.local avec vos clés Supabase');
+}
+
+export const supabase = createClient<any>(supabaseUrl, supabaseKey, {
   auth: {
     persistSession: true,
     autoRefreshToken: true,
-    detectSessionInUrl: false,
-    flowType: 'pkce' // Meilleure sécurité pour les SPA
+    detectSessionInUrl: true,
+    flowType: 'pkce'
+  },
+  db: {
+    schema: 'public',
   },
   global: {
     headers: {
-      'X-Client-Info': 'garage-abidjan-dashboard'
+      'X-Client-Info': 'garage-abidjan-dashboard/production',
     }
   }
 });
 
-// Fonctions d'authentification réelles
-export const handleRealAuth = {
-  signUp: async (email: string, password: string) => {
+export interface AuthResponse {
+  user: any;
+  session: any;
+  error?: string;
+}
+
+export interface ValidationResponse {
+  isValid: boolean;
+  session: any;
+  user: any;
+  error?: any;
+}
+
+export const handleRealAuth = async (email: string, password: string) => {
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+  if (error) throw error;
+  return data;
+};
+
+export const clearSession = async () => {
+  await supabase.auth.signOut();
+};
+
+const getFriendlyAuthError = (error: any): string => {
+  const message = error.message?.toLowerCase() || '';
+  if (message.includes('email not confirmed')) {
+    return 'Veuillez confirmer votre email avant de vous connecter. Vérifiez votre boîte mail.';
+  }
+  if (message.includes('invalid login credentials')) {
+    return 'Email ou mot de passe incorrect.';
+  }
+  if (message.includes('user already registered')) {
+    return 'Un compte existe déjà avec cet email.';
+  }
+  if (message.includes('password')) {
+    return 'Le mot de passe doit contenir au moins 8 caractères.';
+  }
+  if (message.includes('email')) {
+    return 'Format d\'email invalide.';
+  }
+  if (message.includes('too many requests')) {
+    return 'Trop de tentatives. Veuillez réessayer dans quelques minutes.';
+  }
+  return error.message || 'Une erreur inattendue s\'est produite.';
+};
+
+// Inscription avec vraie validation email
+export const signUpWithEmail = async (email: string, password: string, userData?: any): Promise<AuthResponse> => {
+  try {
     const { data, error } = await supabase.auth.signUp({
-      email: email.trim(),
-      password: password.trim(),
-      options: { 
-        emailRedirectTo: `${window.location.origin}/auth/confirm` 
+      email,
+      password,
+      options: {
+        emailRedirectTo: `${window.location.origin}/auth/confirm`,
+        data: userData
       }
     });
-    if (error) throw new Error(formatAuthError(error));
-    return data;
-  },
+    if (error) throw new Error(getFriendlyAuthError(error));
+    return {
+      user: data.user,
+      session: data.session
+    };
+  } catch (error: any) {
+    return {
+      user: null,
+      session: null,
+      error: error.message
+    };
+  }
+};
 
-  signIn: async (email: string, password: string) => {
-    const { data, error } = await supabase.auth.signInWithPassword({ 
-      email: email.trim(), 
-      password: password.trim() 
+// Connexion avec vérification email confirmé
+export const signInWithEmail = async (email: string, password: string): Promise<AuthResponse> => {
+  try {
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password
     });
-    
-    if (error?.status === 400 && error.message.includes("Email not confirmed")) {
-      throw new Error("CONFIRM_EMAIL");
+    if (error) throw new Error(getFriendlyAuthError(error));
+    if (data.user && !data.user.email_confirmed_at) {
+      throw new Error('Email non confirmé. Vérifiez votre boîte mail et cliquez sur le lien de confirmation.');
     }
-    if (error) throw new Error(formatAuthError(error));
-    return data;
-  },
+    return {
+      user: data.user,
+      session: data.session
+    };
+  } catch (error: any) {
+    return {
+      user: null,
+      session: null,
+      error: error.message
+    };
+  }
+};
 
-  signOut: async () => {
-    const { error } = await supabase.auth.signOut();
-    if (error) throw new Error(formatAuthError(error));
-  },
-
-  validateSession: async () => {
+// Validation de session avec vérification RLS
+export const validateSession = async (): Promise<ValidationResponse> => {
+  try {
     const { data: { session }, error } = await supabase.auth.getSession();
-    if (error) throw new Error(formatAuthError(error));
-    return session;
-  },
+    if (error) throw error;
+    if (!session || !session.user) {
+      return {
+        isValid: false,
+        session: null,
+        user: null
+      };
+    }
+    if (!session.user.email_confirmed_at) {
+      return {
+        isValid: false,
+        session: null,
+        user: null,
+        error: 'Email non confirmé'
+      };
+    }
+    return {
+      isValid: true,
+      session: session,
+      user: session.user
+    };
+  } catch (error) {
+    console.error('Session validation error:', error);
+    return {
+      isValid: false,
+      session: null,
+      user: null,
+      error: error
+    };
+  }
+};
 
-  resetPassword: async (email: string) => {
-    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-      redirectTo: `${window.location.origin}/auth/reset-password` 
+// Déconnexion
+export const signOut = async (): Promise<{ error?: string }> => {
+  try {
+    const { error } = await supabase.auth.signOut();
+    if (error) throw error;
+    return {};
+  } catch (error: any) {
+    return { error: error.message };
+  }
+};
+
+// Renvoyer email de confirmation
+export const resendConfirmation = async (email: string): Promise<{ error?: string }> => {
+  try {
+    const { error } = await supabase.auth.resend({
+      type: 'signup',
+      email: email,
+      options: {
+        emailRedirectTo: `${window.location.origin}/auth/confirm`
+      }
     });
-    if (error) throw new Error(formatAuthError(error));
+    if (error) throw error;
+    return {};
+  } catch (error: any) {
+    return { error: getFriendlyAuthError(error) };
   }
 };
 
-// Helper pour formater les erreurs d'auth
-const formatAuthError = (error: any): string => {
-  if (error.message?.includes('Invalid login credentials')) {
-    return 'Email ou mot de passe incorrect';
+// Réinitialisation de mot de passe
+export const resetPassword = async (email: string): Promise<{ error?: string }> => {
+  try {
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/auth/reset-password`
+    });
+    if (error) throw error;
+    return {};
+  } catch (error: any) {
+    return { error: getFriendlyAuthError(error) };
   }
-  if (error.message?.includes('Email not confirmed')) {
-    return 'Email non confirmé. Vérifiez votre boîte mail.';
-  }
-  if (error.message?.includes('User already registered')) {
-    return 'Un compte existe déjà avec cet email';
-  }
-  if (error.message?.includes('Password should be at least')) {
-    return 'Le mot de passe doit contenir au moins 6 caractères';
-  }
-  return error.message || 'Erreur d\'authentification';
 };
 
-// Export des fonctions principales (rétro-compatibilité)
-export const handleLogin = handleRealAuth.signIn;
-export const handleLogout = handleRealAuth.signOut;
-export const validateSession = handleRealAuth.validateSession;
-export const clearSession = handleRealAuth.signOut;
+// Mise à jour du mot de passe
+export const updatePassword = async (newPassword: string): Promise<{ error?: string }> => {
+  try {
+    const { error } = await supabase.auth.updateUser({
+      password: newPassword
+    });
+    if (error) throw error;
+    return {};
+  } catch (error: any) {
+    return { error: getFriendlyAuthError(error) };
+  }
+};
 
-// Initialisation et vérification au chargement
-(async () => {
-  const { data: { session } } = await supabase.auth.getSession();
-  console.log('État initial auth:', session ? 'connecté' : 'non connecté');
-})();
+// Fonction simplifiée pour créer une organisation (uniquement avec 'name')
+export const createOrganizationWithEdge = async (orgData: any) => {
+  try {
+    console.log('🔍 Tentative création organisation avec données:', orgData);
+
+    // Validation des données requises
+    if (!orgData.name || orgData.name.trim() === '') {
+      throw new Error('Le nom de l\'organisation est requis');
+    }
+
+    // Préparer les données communes
+    const commonData = {
+      code: orgData.code || '',
+      slug: orgData.slug || '',
+      email: orgData.email || null,
+      subscription_type: orgData.subscription_type || 'monthly',
+      is_active: true
+    };
+
+    console.log('📋 Données communes:', commonData);
+    console.log('📋 Nom de l\'organisation:', orgData.name);
+
+    // Insérer avec la colonne 'name' uniquement
+    console.log('🔄 Tentative avec colonne "name"...');
+    const { data: createdOrg, error: insertError } = await supabase
+      .from('organisations')
+      .insert({
+        ...commonData,
+        name: orgData.name.trim() // Colonne name uniquement
+      })
+      .select()
+      .single();
+
+    if (createdOrg && !insertError) {
+      console.log('✅ Organisation créée avec succès');
+      return { data: createdOrg, error: null };
+    }
+
+    // Si ça échoue, retourner l'erreur
+    console.error('❌ Erreur création organisation:', insertError);
+    return { data: null, error: insertError };
+
+  } catch (error) {
+    console.error('❌ Exception lors de la création d\'organisation:', error);
+    return { data: null, error };
+  }
+};
+
+// Fonction simplifiée pour récupérer les organisations (uniquement avec 'name')
+export const getOrganizationsWithEdge = async () => {
+  try {
+    const { data: organizations, error } = await supabase
+      .from('organisations')
+      .select('id, name, code, description, created_at')
+      .order('name');
+
+    if (organizations && !error) {
+      console.log('✅ Organisations récupérées avec succès');
+      return { organizations, error: null };
+    }
+
+    console.error('❌ Erreur récupération organisations:', error);
+    return { organizations: [], error };
+
+  } catch (error) {
+    console.error('❌ Exception lors de la récupération d\'organisations:', error);
+    return { organizations: [], error };
+  }
+};
+
+// Vérifier les permissions utilisateur pour une organisation (uniquement avec 'name')
+export const checkUserPermissions = async (userId: string, organizationId?: string) => {
+  try {
+    if (!organizationId) {
+      const { data: userOrgs, error } = await supabase
+        .from('user_organizations')
+        .select(`
+          organisation_id,
+          organisations!inner(
+            id,
+            name,
+            code,
+            description
+          )
+        `)
+        .eq('user_id', userId);
+
+      if (error) {
+        console.error('Error fetching user organizations:', error);
+        return {
+          organizations: [],
+          hasAccess: false,
+          error: error.message
+        };
+      }
+
+      return {
+        organizations: userOrgs || [],
+        hasAccess: (userOrgs?.length || 0) > 0
+      };
+    }
+
+    const { data: userOrg, error } = await supabase
+      .from('user_organizations')
+      .select(`
+        organisations!inner(
+          id,
+          name,
+          code,
+          description
+        )
+      `)
+      .eq('user_id', userId)
+      .eq('organisation_id', organizationId)
+      .single();
+
+    if (error && error.code !== 'PGRST116') {
+      console.error('Error fetching user organization:', error);
+      return {
+        hasAccess: false,
+        error: error.message
+      };
+    }
+
+    return {
+      hasAccess: !!userOrg,
+      role: 'user', // Rôle par défaut car pas de colonne role
+      organization: userOrg?.organisations
+    };
+  } catch (error) {
+    console.error('Permission check error:', error);
+    return {
+      hasAccess: false,
+      error: error
+    };
+  }
+};
+
+// Vérifier si l'utilisateur est super admin
+export const checkSuperAdminStatus = async (userId?: string): Promise<{ isSuperAdmin: boolean; error?: any }> => {
+  try {
+    const { data: userData } = await supabase.auth.getUser();
+    const userIdToCheck = userId || userData?.user?.id;
+    if (!userIdToCheck) {
+      return { isSuperAdmin: false };
+    }
+    const { data, error }: { data: any; error: any } = await supabase
+      .from('super_admins')
+      .select('id, est_actif')
+      .eq('user_id', userIdToCheck)
+      .eq('est_actif', true)
+      .single();
+    if (error && error.code !== 'PGRST116') {
+      throw error;
+    }
+    return {
+      isSuperAdmin: !!data,
+      error: undefined
+    };
+  } catch (error) {
+    console.error('Super admin check error:', error);
+    return {
+      isSuperAdmin: false,
+      error
+    };
+  }
+};
+
+// Récupérer les organisations disponibles avec gestion d'erreurs robuste
+export const getAvailableOrganizations = async () => {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      return { organizations: [], error: 'Utilisateur non connecté' };
+    }
+
+    // Vérifier d'abord si l'utilisateur est super admin
+    const { isSuperAdmin } = await checkSuperAdminStatus(user.id);
+
+    if (isSuperAdmin) {
+      // Super admin : récupérer toutes les organisations directement
+      console.log('🔍 Super admin détecté, récupération de toutes les organisations...');
+      const { organizations, error } = await getOrganizationsWithEdge();
+      if (error) {
+        console.error('❌ Erreur récupération organisations pour super admin:', error);
+        return {
+          organizations: [],
+          isSuperAdmin: true,
+          error: error.message
+        };
+      }
+      console.log('✅ Organisations récupérées pour super admin:', organizations?.length || 0);
+      return {
+        organizations: organizations || [],
+        isSuperAdmin: true
+      };
+    } else {
+      // Utilisateur normal : essayer de récupérer via user_organizations
+      console.log('🔍 Utilisateur normal, vérification des permissions...');
+      try {
+        const { organizations } = await checkUserPermissions(user.id);
+        return {
+          organizations: organizations.map((org: any) => org.organisations),
+          isSuperAdmin: false
+        };
+      } catch (permError) {
+        console.error('❌ Erreur permissions utilisateur:', permError);
+        // Fallback : récupérer toutes les organisations si les permissions échouent
+        console.log('🔄 Fallback : récupération directe des organisations...');
+        const { organizations, error } = await getOrganizationsWithEdge();
+        if (error) {
+          return {
+            organizations: [],
+            isSuperAdmin: false,
+            error: error.message
+          };
+        }
+        return {
+          organizations: organizations || [],
+          isSuperAdmin: false
+        };
+      }
+    }
+  } catch (error: any) {
+    console.error('❌ Erreur générale récupération organisations:', error);
+    return {
+      organizations: [],
+      error: error.message
+    };
+  }
+};
+
+// Debug info
+export const getSupabaseDebugInfo = async () => {
+  try {
+    const { data: session } = await supabase.auth.getSession();
+    const { data: user } = await supabase.auth.getUser();
+    return {
+      session: session.session,
+      user: user.user,
+      isConnected: !!session.session,
+      supabaseUrl: supabaseUrl,
+      timestamp: new Date().toISOString()
+    };
+  } catch (error) {
+    console.error('Error getting Supabase debug info:', error);
+    return {
+      session: null,
+      user: null,
+      isConnected: false,
+      error: error,
+      timestamp: new Date().toISOString()
+    };
+  }
+};
+
+// Logging pour production (désactivé par défaut)
+const enableLogging = import.meta.env.VITE_DEBUG === 'true';
+if (enableLogging) {
+  supabase
+    .channel('system')
+    .on('system', { event: '*' }, (payload) => {
+      console.log('[Supabase Event]', payload);
+    })
+    .subscribe();
+}
+
+// Vérification initiale de connexion
+supabase.auth.getSession()
+  .then(({ data: { session } }) => {
+    if (session) {
+      console.log('✅ Supabase connecté avec session:', session.user?.email);
+    } else {
+      console.log('ℹ️ Supabase initialisé - aucune session active (normal au démarrage)');
+    }
+  })
+  .catch((error) => {
+    console.error('❌ Erreur de connexion Supabase:', error);
+  });

@@ -31,6 +31,7 @@ const WorkflowGuard: React.FC<WorkflowGuardProps> = ({ children }) => {
 
       if (superAdminError) {
         console.error('❌ Erreur vérification super admin:', superAdminError);
+        // If table doesn't exist, start with super admin creation
         setWorkflowState('needs-init');
         setInitStep('super-admin');
         return;
@@ -52,6 +53,7 @@ const WorkflowGuard: React.FC<WorkflowGuardProps> = ({ children }) => {
 
       if (orgError) {
         console.error('❌ Erreur vérification organisations:', orgError);
+        // If table doesn't exist or has issues, start with pricing
         setWorkflowState('needs-init');
         setInitStep('pricing');
         return;
@@ -104,6 +106,41 @@ const WorkflowGuard: React.FC<WorkflowGuardProps> = ({ children }) => {
       }
 
       console.log('✅ Session utilisateur valide');
+
+      // 5. Vérifier si l'utilisateur a une organisation sélectionnée
+      const storedOrg = localStorage.getItem('current_org');
+      const storedOrgCode = localStorage.getItem('org_code');
+
+      if (!storedOrg || !storedOrgCode) {
+        console.log('⚠️ Aucune organisation sélectionnée, redirection vers auth');
+        setWorkflowState('needs-auth');
+        return;
+      }
+
+      // Vérifier la validité de l'organisation
+      try {
+        const { data: isValid, error: validationError } = await supabase.rpc('validate_org_access', {
+          org_id: storedOrg,
+          user_id: session.user.id,
+          org_code: storedOrgCode
+        });
+
+        if (validationError || !isValid) {
+          console.log('⚠️ Organisation invalide, nettoyage et redirection vers auth');
+          localStorage.removeItem('current_org');
+          localStorage.removeItem('org_code');
+          setWorkflowState('needs-auth');
+          return;
+        }
+
+        console.log('✅ Organisation valide sélectionnée');
+      } catch (error) {
+        console.error('❌ Erreur validation organisation:', error);
+        localStorage.removeItem('current_org');
+        localStorage.removeItem('org_code');
+        setWorkflowState('needs-auth');
+        return;
+      }
 
       // Tout est prêt
       console.log('🎉 Workflow complet, application prête');

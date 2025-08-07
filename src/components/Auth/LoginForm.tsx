@@ -79,8 +79,8 @@ const LoginForm = () => {
 
       {showResendLink && (
         <div className="text-center">
-          <Button 
-            variant="link" 
+          <Button
+            variant="link"
             onClick={handleResendConfirmation}
             disabled={loading}
             className="text-sm"

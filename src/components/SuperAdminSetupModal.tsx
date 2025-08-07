@@ -8,7 +8,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
   User, Mail, Phone, Shield, AlertCircle, Eye, EyeOff, Crown, Lock, Sparkles
 } from 'lucide-react';
-import { supabase, handleRealAuth } from '@/integrations/supabase/client';
+import { supabase, signUpWithEmail } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
 interface SuperAdminSetupModalProps {
@@ -89,19 +89,32 @@ const SuperAdminSetupModal: React.FC<SuperAdminSetupModalProps> = ({ isOpen, onC
     try {
       let userId: string;
 
-      // 1. Vérifier si l'utilisateur existe déjà
-      const { data: existingUsers } = await supabase.auth.admin.listUsers();
-      const existingUser = existingUsers.users?.find(user => user.email === formData.email);
-
-      if (existingUser) {
-        // Utiliser l'utilisateur existant
-        userId = existingUser.id;
-        console.log('Utilisateur existant trouvé, utilisation du compte:', formData.email);
+      // 1. Créer un nouveau compte (pas de vérification admin pour éviter 403)
+      const authData = await signUpWithEmail(formData.email, formData.password, {
+        full_name: `${formData.prenom} ${formData.nom}`,
+        phone: formData.phone,
+        role: 'superadmin'
+      });
+      
+      if (!authData.user) {
+        if (authData.error?.includes('already registered')) {
+          // Si l'utilisateur existe déjà, on peut essayer de se connecter pour récupérer l'ID
+          const { data: signInData } = await supabase.auth.signInWithPassword({
+            email: formData.email,
+            password: formData.password
+          });
+          if (signInData.user) {
+            userId = signInData.user.id;
+            console.log('Utilisateur existant, connexion réussie:', formData.email);
+          } else {
+            throw new Error('Utilisateur existant mais mot de passe incorrect');
+          }
+        } else {
+          throw new Error(authData.error || 'User creation failed');
+        }
       } else {
-        // Créer un nouveau compte
-        const authData = await handleRealAuth.signUp(formData.email, formData.password);
-        if (!authData.user) throw new Error('User creation failed');
         userId = authData.user.id;
+        console.log('Nouveau compte créé:', formData.email);
       }
 
       // 2. Vérifier si l'utilisateur est déjà super admin

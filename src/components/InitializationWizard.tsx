@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import { toast } from 'sonner';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase, createOrganizationWithEdge } from '@/integrations/supabase/client';
 import PricingModal from '@/components/PricingModal';
 import SuperAdminSetupModal from '@/components/SuperAdminSetupModal';
 import GarageSetupModal from '@/components/GarageSetupModal';
 import SmsValidationModal from '@/components/SmsValidationModal';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -18,7 +18,7 @@ interface InitializationWizardProps {
   startStep: 'super-admin' | 'pricing' | 'organization-admin';
 }
 
-type WizardStep = 
+type WizardStep =
   | 'super-admin'
   | 'pricing'
   | 'organization-admin'
@@ -85,19 +85,14 @@ const InitializationWizard: React.FC<InitializationWizardProps> = ({
       // Générer un code unique pour l'organisation
       const code = slug.toUpperCase().substring(0, 6) + Date.now().toString().slice(-4);
 
-      // Créer l'organisation
-      const { data: orgData, error: orgError } = await supabase
-        .from('organisations')
-        .insert({
-          name: orgAdminData.organisationName,
-          code: code,
-          slug: slug,
-          email: orgAdminData.adminEmail,
-          subscription_type: orgAdminData.selectedPlan === 'annual' ? 'lifetime' : 'monthly',
-          is_active: true
-        })
-        .select()
-        .single();
+      // Créer l'organisation avec la fonction Edge
+      const { data: orgData, error: orgError } = await createOrganizationWithEdge({
+        name: orgAdminData.organisationName,
+        code: code,
+        slug: slug,
+        email: orgAdminData.adminEmail,
+        subscription_type: orgAdminData.selectedPlan === 'annual' ? 'lifetime' : 'monthly'
+      });
 
       if (orgError) throw orgError;
 
@@ -105,7 +100,7 @@ const InitializationWizard: React.FC<InitializationWizardProps> = ({
       setOrgAdminData(prev => ({ ...prev, organisationCode: code }));
 
       toast.success('Organisation créée avec succès!');
-      
+
       // Passer à la validation SMS
       setCurrentStep('sms-validation');
     } catch (error: any) {
@@ -118,7 +113,7 @@ const InitializationWizard: React.FC<InitializationWizardProps> = ({
   // Gestion de la validation SMS
   const handleSmsValidation = async (code: string) => {
     console.log('✅ SMS validé:', code);
-    
+
     try {
       // Créer le compte admin après validation SMS
       const { data: authData, error: authError } = await supabase.auth.signUp({
@@ -172,11 +167,11 @@ const InitializationWizard: React.FC<InitializationWizardProps> = ({
   // Gestion du setup garage
   const handleGarageSetup = async (garageData: any) => {
     console.log('✅ Garage configuré:', garageData);
-    
+
     // Ici on pourrait sauvegarder les données du garage
     toast.success('Configuration du garage terminée!');
     setCurrentStep('complete');
-    
+
     // Rediriger vers l'authentification après un délai
     setTimeout(() => {
       onComplete();
@@ -199,8 +194,8 @@ const InitializationWizard: React.FC<InitializationWizardProps> = ({
 
     case 'pricing':
       return (
-        <PricingModal 
-          isOpen={isOpen} 
+        <PricingModal
+          isOpen={isOpen}
           onSelectPlan={handlePlanSelection}
         />
       );
@@ -214,6 +209,9 @@ const InitializationWizard: React.FC<InitializationWizardProps> = ({
                 <Building2 className="h-6 w-6 text-primary" />
                 Configuration Organisation & Admin
               </DialogTitle>
+              <DialogDescription className="text-center">
+                Configurez votre organisation et créez le compte administrateur principal.
+              </DialogDescription>
             </DialogHeader>
 
             <form onSubmit={handleOrganizationAdminSubmit} className="space-y-6">
@@ -376,6 +374,9 @@ const InitializationWizard: React.FC<InitializationWizardProps> = ({
               <DialogTitle className="text-xl text-green-600">
                 🎉 Configuration Terminée !
               </DialogTitle>
+              <DialogDescription>
+                Votre organisation et votre compte administrateur ont été créés avec succès.
+              </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
               <p className="text-muted-foreground">

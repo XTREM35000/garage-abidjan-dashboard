@@ -1,5 +1,5 @@
 import React, { Suspense, memo } from 'react';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Loader2 } from 'lucide-react';
 
 interface LazyModalWrapperProps {
@@ -18,7 +18,11 @@ const LazyModalWrapper: React.FC<LazyModalWrapperProps> = memo(({
   loadingMessage = "Chargement..."
 }) => {
   const LoadingFallback = () => (
-    <DialogContent className={`${className} flex items-center justify-center p-8`}>
+    <DialogContent className={`${className} flex flex-col items-center justify-center p-8`}>
+      <DialogHeader className="sr-only">
+        <DialogTitle>Chargement</DialogTitle>
+        <DialogDescription>Veuillez patienter pendant le chargement du contenu</DialogDescription>
+      </DialogHeader>
       <div className="flex flex-col items-center gap-4">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
         <p className="text-sm text-muted-foreground">
