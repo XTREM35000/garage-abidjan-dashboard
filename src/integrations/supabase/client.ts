@@ -262,9 +262,16 @@ export const getOrganizationsWithEdge = async () => {
       .select('id, name, code, description, created_at')
       .order('name');
 
+    console.log('🔍 Organisations brutes récupérées:', organizations);
+
     if (organizations && !error) {
-      console.log('✅ Organisations récupérées avec succès');
-      return { organizations, error: null };
+      console.log('✅ Organisations récupérées avec succès:', organizations.length);
+      // Mapper name vers nom pour la compatibilité avec le frontend
+      const mappedOrganizations = organizations.map(org => ({
+        ...org,
+        nom: org.name // Ajouter le champ nom pour le frontend
+      }));
+      return { organizations: mappedOrganizations, error: null };
     }
 
     console.error('❌ Erreur récupération organisations:', error);
@@ -280,32 +287,43 @@ export const getOrganizationsWithEdge = async () => {
 export const checkUserPermissions = async (userId: string, organizationId?: string) => {
   try {
     if (!organizationId) {
-      const { data: userOrgs, error } = await supabase
-        .from('user_organizations')
-        .select(`
-          organisation_id,
-          organisations!inner(
-            id,
-            name,
-            code,
-            description
-          )
-        `)
-        .eq('user_id', userId);
+        const { data: userOrgs, error } = await supabase
+          .from('user_organizations')
+          .select(`
+            organisation_id,
+            organisations!inner(
+              id,
+              name,
+              code,
+              description
+            )
+          `)
+          .eq('user_id', userId);
 
-      if (error) {
-        console.error('Error fetching user organizations:', error);
+        console.log('🔍 user_organizations récupérées:', userOrgs);
+
+        if (error) {
+          console.error('❌ Erreur récupération user_organizations:', error);
+          return {
+            organizations: [],
+            hasAccess: false,
+            error: error.message
+          };
+        }
+
+        // Mapper les organisations avec le nom correct
+        const mappedOrgs = userOrgs?.map(userOrg => ({
+          ...userOrg,
+          organisations: userOrg.organisations ? {
+            ...userOrg.organisations,
+            nom: (userOrg.organisations as any).name // Ajouter nom pour compatibilité
+          } : null
+        })) || [];
+
         return {
-          organizations: [],
-          hasAccess: false,
-          error: error.message
+          organizations: mappedOrgs,
+          hasAccess: (userOrgs?.length || 0) > 0
         };
-      }
-
-      return {
-        organizations: userOrgs || [],
-        hasAccess: (userOrgs?.length || 0) > 0
-      };
     }
 
     const { data: userOrg, error } = await supabase

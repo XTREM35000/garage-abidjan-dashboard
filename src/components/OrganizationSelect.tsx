@@ -36,22 +36,32 @@ const OrganizationSelect: React.FC<OrganizationSelectProps> = ({ onSelect }) => 
     try {
       setIsLoading(true);
       setError('');
+      console.log('🔍 OrganizationSelect: Début récupération organisations...');
 
       const { organizations: orgs, isSuperAdmin: isSuper, error: fetchError } = await getAvailableOrganizations();
 
+      console.log('🔍 OrganizationSelect: Résultat récupération:', {
+        orgs: orgs?.length || 0,
+        isSuperAdmin: isSuper,
+        error: fetchError
+      });
+
       if (fetchError) {
+        console.error('❌ OrganizationSelect: Erreur détaillée:', fetchError);
         throw new Error(fetchError);
       }
 
+      console.log('✅ OrganizationSelect: Organisations détaillées:', orgs);
       setOrganizations(orgs || []);
       setIsSuperAdmin(isSuper || false);
 
       if (orgs && orgs.length === 1) {
         setSelectedOrgId(orgs[0].id);
+        console.log('🎯 OrganizationSelect: Auto-sélection organisation unique:', orgs[0].nom);
       }
 
     } catch (error: any) {
-      console.error('Erreur récupération organisations:', error);
+      console.error('❌ OrganizationSelect: Erreur récupération organisations:', error);
       setError('Erreur lors du chargement des organisations. Veuillez réessayer.');
       toast.error('Impossible de charger les organisations');
     } finally {
