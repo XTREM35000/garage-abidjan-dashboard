@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2, Mail, Lock, User } from 'lucide-react';
-import { handleRealAuth } from '@/integrations/supabase/client';
+import { signUpWithEmail } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
 interface RegisterFormProps {
@@ -34,7 +34,15 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ setTab }) => {
     }
 
     try {
-      await handleRealAuth.signUp(formData.email, formData.password);
+      const { user, session, error } = await signUpWithEmail(formData.email, formData.password, {
+        first_name: formData.firstName,
+        last_name: formData.lastName
+      });
+      if (error) {
+        setError(error);
+        toast.error(error);
+        return;
+      }
       toast.success('Inscription réussie ! Vérifiez votre email pour confirmer votre compte.');
       setTab('login');
     } catch (error: any) {

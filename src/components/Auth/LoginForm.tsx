@@ -3,7 +3,7 @@ import { Alert } from '@/components/ui/alert';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label} from '@/components/ui/label';
-import { handleRealAuth } from '@/integrations/supabase/client';
+import { signInWithEmail, resendConfirmation } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
 
 const LoginForm = () => {
@@ -21,15 +21,19 @@ const LoginForm = () => {
     setShowResendLink(false);
 
     try {
-      await handleRealAuth.signIn(email, password);
-      navigate('/dashboard');
-    } catch (err: any) {
-      if (err.message === 'CONFIRM_EMAIL') {
-        setError('Email non confirmé. Vérifiez votre boîte mail.');
-        setShowResendLink(true);
-      } else {
-        setError(err.message || 'Erreur de connexion');
+      const { user, session, error } = await signInWithEmail(email, password);
+      if (error) {
+        if (error.includes('Email non confirmé')) {
+          setShowResendLink(true);
+        }
+        setError(error);
+        return;
       }
+      if (session) {
+        navigate('/dashboard');
+      }
+    } catch (err: any) {
+      setError(err.message || 'Erreur de connexion');
     } finally {
       setLoading(false);
     }
@@ -38,10 +42,14 @@ const LoginForm = () => {
   const handleResendConfirmation = async () => {
     try {
       setLoading(true);
-      await handleRealAuth.signUp(email, password);
-      setError('');
-      setShowResendLink(false);
-      alert('Email de confirmation renvoyé !');
+      const { error } = await resendConfirmation(email);
+      if (!error) {
+        setError('');
+        setShowResendLink(false);
+        alert('Email de confirmation renvoyé !');
+      } else {
+        setError(error);
+      }
     } catch (err: any) {
       setError(err.message || 'Erreur lors du renvoi');
     } finally {
