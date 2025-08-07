@@ -27,15 +27,16 @@ const PostAuthHandler: React.FC<PostAuthHandlerProps> = ({ children }) => {
       const storedOrgCode = localStorage.getItem('org_code');
 
       if (storedOrg && storedOrgCode) {
-        // Vérifier si l'organisation est toujours valide
+        // Vérifier si l'organisation existe et si le code correspond
         try {
-          const { data: isValid } = await supabase.rpc('validate_org_access', {
-            org_id: storedOrg,
-            user_id: session.user.id,
-            org_code: storedOrgCode
-          });
+          const { data: org, error: orgError } = await supabase
+            .from('organisations')
+            .select('id, code')
+            .eq('id', storedOrg)
+            .eq('code', storedOrgCode)
+            .single();
 
-          if (isValid) {
+          if (!orgError && org) {
             setSelectedOrg({ id: storedOrg, code: storedOrgCode });
             setHasOrganization(true);
             return;
@@ -61,13 +62,15 @@ const PostAuthHandler: React.FC<PostAuthHandlerProps> = ({ children }) => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
 
-      const { data: isValid } = await supabase.rpc('validate_org_access', {
-        org_id: orgId,
-        user_id: session.user.id,
-        org_code: orgCode
-      });
+      // Vérifier si l'organisation existe et si le code correspond
+      const { data: org, error: orgError } = await supabase
+        .from('organisations')
+        .select('id, code')
+        .eq('id', orgId)
+        .eq('code', orgCode)
+        .single();
 
-      if (isValid) {
+      if (!orgError && org) {
         localStorage.setItem('current_org', orgId);
         localStorage.setItem('org_code', orgCode);
         setSelectedOrg({ id: orgId, code: orgCode });

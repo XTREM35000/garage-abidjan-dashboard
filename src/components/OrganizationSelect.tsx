@@ -5,7 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Building, Key, Loader2, AlertCircle } from 'lucide-react';
-import { getAvailableOrganizations } from '@/integrations/supabase/client';
+import { getAvailableOrganizations, supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
 interface Organization {
@@ -38,17 +38,52 @@ const OrganizationSelect: React.FC<OrganizationSelectProps> = ({ onSelect }) => 
       setError('');
       console.log('🔍 OrganizationSelect: Début récupération organisations...');
 
-      const { organizations: orgs, isSuperAdmin: isSuper, error: fetchError } = await getAvailableOrganizations();
+      // Test direct des organisations
+      console.log('🧪 Test direct des organisations...');
+      const { data: directOrgs, error: directError } = await supabase
+        .from('organisations')
+        .select('id, name, code, description')
+        .order('name');
+      
+      console.log('🔍 Organisations directes:', directOrgs);
+      console.log('❌ Erreur directe:', directError);
+
+      let orgs = [];
+      let isSuper = false;
+      let fetchError = null;
+
+      try {
+        const result = await getAvailableOrganizations();
+        orgs = result.organizations || [];
+        isSuper = result.isSuperAdmin || false;
+        fetchError = result.error;
+      } catch (error) {
+        console.error('❌ Erreur getAvailableOrganizations:', error);
+        fetchError = error.message;
+      }
 
       console.log('🔍 OrganizationSelect: Résultat récupération:', {
         orgs: orgs?.length || 0,
         isSuperAdmin: isSuper,
-        error: fetchError
+        error: fetchError,
+        orgsDetails: orgs
       });
 
-      if (fetchError) {
-        console.error('❌ OrganizationSelect: Erreur détaillée:', fetchError);
-        throw new Error(fetchError);
+      // Si aucune organisation n'est trouvée via getAvailableOrganizations, utiliser les organisations directes
+      if (!orgs || orgs.length === 0) {
+        console.log('🔄 Aucune organisation trouvée via getAvailableOrganizations, utilisation des organisations directes...');
+        if (!directError && directOrgs && directOrgs.length > 0) {
+          const mappedOrgs = directOrgs.map(org => ({
+            id: org.id,
+            nom: org.name,
+            code: org.code,
+            description: org.description
+          }));
+          console.log('✅ Organisations récupérées directement:', mappedOrgs);
+          setOrganizations(mappedOrgs);
+          setIsSuperAdmin(false);
+          return;
+        }
       }
 
       console.log('✅ OrganizationSelect: Organisations détaillées:', orgs);
@@ -98,10 +133,12 @@ const OrganizationSelect: React.FC<OrganizationSelectProps> = ({ onSelect }) => 
         throw new Error('Organisation non trouvée');
       }
 
+      // Vérifier d'abord si le code correspond directement
       if (selectedOrg.code !== accessCode.trim()) {
         throw new Error('Code d\'accès incorrect');
       }
 
+      // Si le code correspond, permettre l'accès (mode demo)
       onSelect(selectedOrgId, accessCode.trim());
 
     } catch (error: any) {

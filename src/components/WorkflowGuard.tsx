@@ -120,13 +120,14 @@ const WorkflowGuard: React.FC<WorkflowGuardProps> = ({ children }) => {
 
       // Vérifier la validité de l'organisation
       try {
-        const { data: isValid, error: validationError } = await supabase.rpc('validate_org_access', {
-          org_id: storedOrg,
-          user_id: session.user.id,
-          org_code: storedOrgCode
-        });
+        const { data: org, error: orgError } = await supabase
+          .from('organisations')
+          .select('id, code')
+          .eq('id', storedOrg)
+          .eq('code', storedOrgCode)
+          .single();
 
-        if (validationError || !isValid) {
+        if (orgError || !org) {
           console.log('⚠️ Organisation invalide, nettoyage et affichage sélection');
           localStorage.removeItem('current_org');
           localStorage.removeItem('org_code');

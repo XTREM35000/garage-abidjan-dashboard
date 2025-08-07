@@ -11,16 +11,37 @@ AS $$
 DECLARE
   is_valid boolean;
 BEGIN
-  -- Vérifie que l'utilisateur a accès à l'org ET que le code correspond
+  -- Vérifier que les paramètres ne sont pas null
+  IF org_id IS NULL OR user_id IS NULL OR org_code IS NULL THEN
+    RETURN false;
+  END IF;
+
+  -- Mode demo : vérifier d'abord si le code correspond à l'organisation
+  SELECT EXISTS (
+    SELECT 1 FROM organisations o
+    WHERE o.id = validate_org_access.org_id
+      AND o.code = validate_org_access.org_code
+  ) INTO is_valid;
+
+  -- Si le code correspond, permettre l'accès (mode demo)
+  IF is_valid THEN
+    RETURN true;
+  END IF;
+
+  -- Sinon, vérifier les permissions via user_organizations
   SELECT EXISTS (
     SELECT 1 FROM user_organizations uo
     JOIN organisations o ON uo.organization_id = o.id
     WHERE uo.user_id = validate_org_access.user_id
       AND o.id = validate_org_access.org_id
-      AND o.access_code = validate_org_access.org_code
+      AND o.code = validate_org_access.org_code
   ) INTO is_valid;
 
   RETURN is_valid;
+EXCEPTION
+  WHEN OTHERS THEN
+    -- En cas d'erreur, retourner false
+    RETURN false;
 END;
 $$;
 

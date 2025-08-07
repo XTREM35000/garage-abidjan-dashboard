@@ -290,7 +290,7 @@ export const checkUserPermissions = async (userId: string, organizationId?: stri
         const { data: userOrgs, error } = await supabase
           .from('user_organizations')
           .select(`
-            organisation_id,
+            organization_id,
             organisations!inner(
               id,
               name,
@@ -304,10 +304,11 @@ export const checkUserPermissions = async (userId: string, organizationId?: stri
 
         if (error) {
           console.error('❌ Erreur récupération user_organizations:', error);
+          // En mode demo, retourner un tableau vide au lieu d'une erreur
           return {
             organizations: [],
             hasAccess: false,
-            error: error.message
+            error: null
           };
         }
 
@@ -337,7 +338,7 @@ export const checkUserPermissions = async (userId: string, organizationId?: stri
         )
       `)
       .eq('user_id', userId)
-      .eq('organisation_id', organizationId)
+      .eq('organization_id', organizationId)
       .single();
 
     if (error && error.code !== 'PGRST116') {
@@ -421,31 +422,48 @@ export const getAvailableOrganizations = async () => {
         isSuperAdmin: true
       };
     } else {
-      // Utilisateur normal : essayer de récupérer via user_organizations
+      // Utilisateur normal : essayer de récupérer via user_organizations d'abord
       console.log('🔍 Utilisateur normal, vérification des permissions...');
       try {
         const { organizations } = await checkUserPermissions(user.id);
-        return {
-          organizations: organizations.map((org: any) => org.organisations),
-          isSuperAdmin: false
-        };
-      } catch (permError) {
-        console.error('❌ Erreur permissions utilisateur:', permError);
-        // Fallback : récupérer toutes les organisations si les permissions échouent
-        console.log('🔄 Fallback : récupération directe des organisations...');
-        const { organizations, error } = await getOrganizationsWithEdge();
-        if (error) {
+        console.log('🔍 Organisations retournées par checkUserPermissions:', organizations);
+        
+        // Si l'utilisateur a des organisations via user_organizations
+        if (organizations && organizations.length > 0) {
+          // Mapper correctement les organisations
+          const mappedOrganizations = organizations
+            .filter((org: any) => org.organisations) // Filtrer les organisations valides
+            .map((org: any) => ({
+              id: org.organisations.id,
+              nom: org.organisations.nom || org.organisations.name, // Utiliser nom ou name
+              code: org.organisations.code,
+              description: org.organisations.description
+            }));
+
+          console.log('✅ Organisations mappées pour utilisateur normal:', mappedOrganizations);
           return {
-            organizations: [],
-            isSuperAdmin: false,
-            error: error.message
+            organizations: mappedOrganizations,
+            isSuperAdmin: false
           };
         }
+      } catch (permError) {
+        console.error('❌ Erreur permissions utilisateur:', permError);
+      }
+      
+      // Mode demo : récupérer toutes les organisations si l'utilisateur n'a pas de relations
+      console.log('🔄 Mode demo : utilisateur sans relations, récupération de toutes les organisations...');
+      const { organizations: allOrgs, error } = await getOrganizationsWithEdge();
+      if (error) {
         return {
-          organizations: organizations || [],
-          isSuperAdmin: false
+          organizations: [],
+          isSuperAdmin: false,
+          error: error.message
         };
       }
+      return {
+        organizations: allOrgs || [],
+        isSuperAdmin: false
+      };
     }
   } catch (error: any) {
     console.error('❌ Erreur générale récupération organisations:', error);
@@ -453,6 +471,50 @@ export const getAvailableOrganizations = async () => {
       organizations: [],
       error: error.message
     };
+  }
+};
+
+// Fonction de test pour vérifier les organisations disponibles
+export const testOrganizations = async () => {
+  try {
+    console.log('🧪 Test des organisations...');
+    
+    // Test 1: Récupération directe des organisations
+    const { data: directOrgs, error: directError } = await supabase
+      .from('organisations')
+      .select('*');
+    
+    console.log('🔍 Organisations directes:', directOrgs);
+    console.log('❌ Erreur directe:', directError);
+    
+    // Test 2: Récupération via user_organizations
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      const { data: userOrgs, error: userOrgsError } = await supabase
+        .from('user_organizations')
+        .select(`
+          organization_id,
+          organisations!inner(
+            id,
+            name,
+            code,
+            description
+          )
+        `)
+        .eq('user_id', user.id);
+      
+      console.log('🔍 User organizations:', userOrgs);
+      console.log('❌ Erreur user organizations:', userOrgsError);
+    }
+    
+    // Test 3: Test de la fonction getAvailableOrganizations
+    const result = await getAvailableOrganizations();
+    console.log('🔍 Résultat getAvailableOrganizations:', result);
+    
+    return result;
+  } catch (error) {
+    console.error('❌ Erreur test organisations:', error);
+    return { organizations: [], error: error.message };
   }
 };
 

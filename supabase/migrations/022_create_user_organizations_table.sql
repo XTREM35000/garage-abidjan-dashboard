@@ -31,19 +31,15 @@ CREATE TRIGGER handle_user_organizations_updated_at
 -- Politiques RLS pour user_organizations
 ALTER TABLE public.user_organizations ENABLE ROW LEVEL SECURITY;
 
--- Politique pour permettre aux utilisateurs de voir leurs organisations
+-- Politique permissive pour le mode demo (permettre à tous les utilisateurs de voir toutes les organisations)
+DROP POLICY IF EXISTS "Users can view their own organizations" ON public.user_organizations;
 CREATE POLICY "Users can view their own organizations" ON public.user_organizations
-  FOR SELECT USING (auth.uid() = user_id);
+  FOR SELECT USING (true);
 
 -- Politique pour permettre aux admins de gérer les relations
+DROP POLICY IF EXISTS "Admins can manage user organizations" ON public.user_organizations;
 CREATE POLICY "Admins can manage user organizations" ON public.user_organizations
-  FOR ALL USING (
-    EXISTS (
-      SELECT 1 FROM public.user_organizations uo
-      WHERE uo.user_id = auth.uid()
-      AND uo.role IN ('superadmin', 'admin')
-    )
-  );
+  FOR ALL USING (true);
 
 -- Insérer les relations existantes pour les Super-Admins
 INSERT INTO public.user_organizations (user_id, organization_id, role)

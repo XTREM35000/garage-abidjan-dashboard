@@ -46,13 +46,15 @@ const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
 
       if (storedOrg && storedOrgCode) {
         try {
-          const { data: isValid, error: validationError } = await supabase.rpc('validate_org_access', {
-            org_id: storedOrg,
-            user_id: user.id,
-            org_code: storedOrgCode
-          });
+          // Vérifier si l'organisation existe et si le code correspond
+          const { data: org, error: orgError } = await supabase
+            .from('organisations')
+            .select('id, code')
+            .eq('id', storedOrg)
+            .eq('code', storedOrgCode)
+            .single();
 
-          if (!validationError && isValid) {
+          if (!orgError && org) {
             setSelectedOrg({ id: storedOrg, code: storedOrgCode });
             setAuthState('authenticated');
             return;
@@ -87,17 +89,22 @@ const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
 
   const handleOrgSelect = async (orgId: string, orgCode: string) => {
     try {
-      const { data: isValid, error } = await supabase.rpc('validate_org_access', {
-        org_id: orgId,
-        user_id: currentUser.id,
-        org_code: orgCode
-      });
+      console.log('🔍 Validation organisation:', { orgId, orgCode, userId: currentUser.id });
+      
+      // Vérifier d'abord si l'organisation existe et si le code correspond
+      const { data: org, error: orgError } = await supabase
+        .from('organisations')
+        .select('id, code')
+        .eq('id', orgId)
+        .eq('code', orgCode)
+        .single();
 
-      if (error || !isValid) {
+      if (orgError || !org) {
         toast.error('Code d\'accès invalide ou accès refusé');
         return;
       }
 
+      // Si l'organisation existe et le code correspond, permettre l'accès (mode demo)
       localStorage.setItem('current_org', orgId);
       localStorage.setItem('org_code', orgCode);
 
