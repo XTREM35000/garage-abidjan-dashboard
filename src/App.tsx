@@ -21,7 +21,8 @@ import NotFound from '@/pages/NotFound';
 
 // Composants
 import WorkflowGuard from '@/components/WorkflowGuard';
-import AuthGuard from '@/components/AuthGuard';
+import SimpleAuthGuard from '@/components/SimpleAuthGuard';
+import PostAuthHandler from '@/components/PostAuthHandler';
 import ErrorBoundary from '@/components/ErrorBoundary';
 
 // Styles
@@ -52,9 +53,11 @@ const App: React.FC = () => {
                 path="/dashboard"
                 element={
                   <WorkflowGuard>
-                    <AuthGuard>
-                      <Dashboard />
-                    </AuthGuard>
+                    <SimpleAuthGuard>
+                      <PostAuthHandler>
+                        <Dashboard />
+                      </PostAuthHandler>
+                    </SimpleAuthGuard>
                   </WorkflowGuard>
                 }
               />
@@ -63,9 +66,11 @@ const App: React.FC = () => {
                 path="/clients"
                 element={
                   <WorkflowGuard>
-                    <AuthGuard>
-                      <ClientsListe />
-                    </AuthGuard>
+                    <SimpleAuthGuard>
+                      <PostAuthHandler>
+                        <ClientsListe />
+                      </PostAuthHandler>
+                    </SimpleAuthGuard>
                   </WorkflowGuard>
                 }
               />
@@ -74,9 +79,11 @@ const App: React.FC = () => {
                 path="/clients/ajouter"
                 element={
                   <WorkflowGuard>
-                    <AuthGuard>
-                      <ClientsAjouter />
-                    </AuthGuard>
+                    <SimpleAuthGuard>
+                      <PostAuthHandler>
+                        <ClientsAjouter />
+                      </PostAuthHandler>
+                    </SimpleAuthGuard>
                   </WorkflowGuard>
                 }
               />
@@ -85,9 +92,11 @@ const App: React.FC = () => {
                 path="/clients/historique"
                 element={
                   <WorkflowGuard>
-                    <AuthGuard>
-                      <ClientsHistorique />
-                    </AuthGuard>
+                    <SimpleAuthGuard>
+                      <PostAuthHandler>
+                        <ClientsHistorique />
+                      </PostAuthHandler>
+                    </SimpleAuthGuard>
                   </WorkflowGuard>
                 }
               />
@@ -96,9 +105,11 @@ const App: React.FC = () => {
                 path="/vehicules"
                 element={
                   <WorkflowGuard>
-                    <AuthGuard>
-                      <Vehicules />
-                    </AuthGuard>
+                    <SimpleAuthGuard>
+                      <PostAuthHandler>
+                        <Vehicules />
+                      </PostAuthHandler>
+                    </SimpleAuthGuard>
                   </WorkflowGuard>
                 }
               />
@@ -107,9 +118,11 @@ const App: React.FC = () => {
                 path="/reparations"
                 element={
                   <WorkflowGuard>
-                    <AuthGuard>
-                      <Reparations />
-                    </AuthGuard>
+                    <SimpleAuthGuard>
+                      <PostAuthHandler>
+                        <Reparations />
+                      </PostAuthHandler>
+                    </SimpleAuthGuard>
                   </WorkflowGuard>
                 }
               />
@@ -118,9 +131,11 @@ const App: React.FC = () => {
                 path="/stock"
                 element={
                   <WorkflowGuard>
-                    <AuthGuard>
-                      <Stock />
-                    </AuthGuard>
+                    <SimpleAuthGuard>
+                      <PostAuthHandler>
+                        <Stock />
+                      </PostAuthHandler>
+                    </SimpleAuthGuard>
                   </WorkflowGuard>
                 }
               />
@@ -129,9 +144,11 @@ const App: React.FC = () => {
                 path="/settings"
                 element={
                   <WorkflowGuard>
-                    <AuthGuard>
-                      <Settings />
-                    </AuthGuard>
+                    <SimpleAuthGuard>
+                      <PostAuthHandler>
+                        <Settings />
+                      </PostAuthHandler>
+                    </SimpleAuthGuard>
                   </WorkflowGuard>
                 }
               />
@@ -140,9 +157,11 @@ const App: React.FC = () => {
                 path="/profil"
                 element={
                   <WorkflowGuard>
-                    <AuthGuard>
-                      <Profil />
-                    </AuthGuard>
+                    <SimpleAuthGuard>
+                      <PostAuthHandler>
+                        <Profil />
+                      </PostAuthHandler>
+                    </SimpleAuthGuard>
                   </WorkflowGuard>
                 }
               />
@@ -151,9 +170,11 @@ const App: React.FC = () => {
                 path="/aide"
                 element={
                   <WorkflowGuard>
-                    <AuthGuard>
-                      <Aide />
-                    </AuthGuard>
+                    <SimpleAuthGuard>
+                      <PostAuthHandler>
+                        <Aide />
+                      </PostAuthHandler>
+                    </SimpleAuthGuard>
                   </WorkflowGuard>
                 }
               />
@@ -162,9 +183,11 @@ const App: React.FC = () => {
                 path="/a-propos"
                 element={
                   <WorkflowGuard>
-                    <AuthGuard>
-                      <APropos />
-                    </AuthGuard>
+                    <SimpleAuthGuard>
+                      <PostAuthHandler>
+                        <APropos />
+                      </PostAuthHandler>
+                    </SimpleAuthGuard>
                   </WorkflowGuard>
                 }
               />

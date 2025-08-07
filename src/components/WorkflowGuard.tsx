@@ -112,8 +112,9 @@ const WorkflowGuard: React.FC<WorkflowGuardProps> = ({ children }) => {
       const storedOrgCode = localStorage.getItem('org_code');
 
       if (!storedOrg || !storedOrgCode) {
-        console.log('⚠️ Aucune organisation sélectionnée, redirection vers auth');
-        setWorkflowState('needs-auth');
+        console.log('⚠️ Aucune organisation sélectionnée, affichage sélection');
+        // Ne pas rediriger vers auth mais afficher la sélection d'organisation
+        setWorkflowState('ready'); // Permettre l'accès à OrganizationSelect
         return;
       }
 
@@ -126,10 +127,10 @@ const WorkflowGuard: React.FC<WorkflowGuardProps> = ({ children }) => {
         });
 
         if (validationError || !isValid) {
-          console.log('⚠️ Organisation invalide, nettoyage et redirection vers auth');
+          console.log('⚠️ Organisation invalide, nettoyage et affichage sélection');
           localStorage.removeItem('current_org');
           localStorage.removeItem('org_code');
-          setWorkflowState('needs-auth');
+          setWorkflowState('ready'); // Permettre l'accès à OrganizationSelect
           return;
         }
 
@@ -138,7 +139,7 @@ const WorkflowGuard: React.FC<WorkflowGuardProps> = ({ children }) => {
         console.error('❌ Erreur validation organisation:', error);
         localStorage.removeItem('current_org');
         localStorage.removeItem('org_code');
-        setWorkflowState('needs-auth');
+        setWorkflowState('ready'); // Permettre l'accès à OrganizationSelect
         return;
       }
 
