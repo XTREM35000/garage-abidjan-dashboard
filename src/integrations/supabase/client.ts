@@ -1,13 +1,8 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 
-const supabaseUrl = import.meta.env.VITE_PUBLIC_SUPABASE_URL || 'https://metssugfqsnttghfrsxx.supabase.co';
-const supabaseKey = import.meta.env.VITE_PUBLIC_SUPABASE_SERVICE_KEY || import.meta.env.VITE_PUBLIC_SUPABASE_ANON_KEY;
-
-if (!supabaseKey) {
-  console.warn('⚠️ Clé Supabase manquante. Utilisez VITE_PUBLIC_SUPABASE_SERVICE_KEY ou VITE_PUBLIC_SUPABASE_ANON_KEY');
-  console.warn('📝 Créez un fichier .env.local avec vos clés Supabase');
-}
+const supabaseUrl = 'https://metssugfqsnttghfrsxx.supabase.co';
+const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1ldHNzdWdmcXNudHRnaGZyc3h4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI4NDk5NjEsImV4cCI6MjA2ODQyNTk2MX0.Vc0yDgzSe6iAfgUHezVKQMm4qvzMRRjCIrTTndpE1k8';
 
 export const supabase = createClient<any>(supabaseUrl, supabaseKey, {
   auth: {
