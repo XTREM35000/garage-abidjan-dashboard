@@ -330,11 +330,9 @@ const ThirdPartyDemo: React.FC = () => {
               setCurrentAuth(null);
             }}
             onValidate={handleSmsValidate}
-            onReject={handleSmsReject}
-            thirdPartyName={currentAuth.thirdPartyName}
-            vehicleInfo={currentAuth.vehicleInfo}
-            ownerPhone={currentAuth.thirdPartyPhone}
-            expiresAt={currentAuth.expiresAt}
+            onRefuse={handleSmsReject}
+            organizationName={currentAuth.thirdPartyName}
+            adminName="Tiers"
           />
         )}
       </div>

@@ -21,8 +21,8 @@ import { toast } from 'sonner';
 interface SmsValidationModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onValidate: () => void;
-  onRefuse: () => void;
+  onValidate: (code?: string) => void | Promise<void>;
+  onRefuse: (code?: string) => void | Promise<void>;
   organizationCode?: string;
   organizationName?: string;
   adminName?: string;

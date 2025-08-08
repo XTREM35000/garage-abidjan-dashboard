@@ -346,15 +346,10 @@ const InitializationWizard: React.FC<InitializationWizardProps> = ({
           isOpen={isOpen}
           onClose={() => {}}
           onValidate={handleSmsValidation}
-          onReject={handleSmsRejection}
-          thirdPartyName="Système d'initialisation"
-          vehicleInfo={{
-            marque: "Configuration",
-            modele: "Organisation",
-            immatriculation: orgAdminData.organisationCode || "ORG-001"
-          }}
-          ownerPhone={orgAdminData.adminPhone}
-          expiresAt={new Date(Date.now() + 15 * 60 * 1000)} // 15 minutes
+          onRefuse={handleSmsRejection}
+          organizationCode={orgAdminData.organisationCode}
+          organizationName="Système d'initialisation"
+          adminName={orgAdminData.adminName}
         />
       );
 
