@@ -153,13 +153,13 @@ const AdminCRUDModal: React.FC<AdminCRUDModalProps> = ({
 
     try {
       // Vérification de l'existence de l'organisation
-      const { data: existingOrg, error: orgError } = await supabase
+      const { data: existingOrg, error: orgCheckError } = await supabase
         .from('organisations')
         .select('id,nom')
         .eq('nom', formData.nom)
         .maybeSingle();
 
-      if (orgError) throw orgError;
+      if (orgCheckError) throw orgCheckError;
 
       if (existingOrg) {
         setErrors(prev => ({ ...prev, nom: 'Cette organisation existe déjà' }));
@@ -167,6 +167,28 @@ const AdminCRUDModal: React.FC<AdminCRUDModalProps> = ({
         setIsLoading(false);
         return;
       }
+
+      // Création de l'organisation
+      const { data: org, error: orgCreateError } = await supabase
+        .from('organisations')
+        .insert({
+          nom: formData.nom,
+          slug: formData.slug,
+          // logo_url: formData.logo_url, // si tu as un champ logo
+          // ...autres champs...
+        })
+        .select()
+        .single();
+
+      if (orgCreateError) throw orgCreateError;
+
+      // Ajoute dans la table garage
+      await supabase.from('garage').insert({
+        organisation_id: org.id,
+        nom: org.nom,
+        // logo_url: org.logo_url,
+        // ...autres champs pertinents...
+      });
 
       // Suite du processus de création...
       const { data: authData, error: authError } = await supabase.auth.signUp({

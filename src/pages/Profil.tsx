@@ -110,6 +110,47 @@ const Profil: React.FC = () => {
 
         if (error) {
           console.error('Erreur lors de la récupération du profil:', error);
+          
+          // Si l'utilisateur n'existe pas dans la table users, créer un profil par défaut
+          if (error.code === 'PGRST116') {
+            console.log('Utilisateur non trouvé dans la table users, création d\'un profil par défaut');
+            
+            // Créer un profil par défaut basé sur les métadonnées auth
+            const defaultProfile: UserProfile = {
+              id: authUser.id,
+              email: authUser.email || '',
+              nom: authUser.user_metadata?.full_name?.split(' ')[0] || '',
+              prenom: authUser.user_metadata?.full_name?.split(' ').slice(1).join(' ') || '',
+              telephone: '',
+              role: 'employe',
+              fonction: '',
+              specialite: '',
+              date_prise_fonction: '',
+              photo_url: authUser.user_metadata?.avatar_url || '',
+              is_active: true,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            };
+            
+            setUserProfile(defaultProfile);
+            setFormData({
+              full_name: authUser.user_metadata?.full_name || authUser.email || '',
+              email: authUser.email || '',
+              phone: '',
+              role: 'employe',
+              speciality: '',
+              date_prise_fonction: '',
+              organization_name: ''
+            });
+            
+            // L'avatar sera récupéré depuis les métadonnées utilisateur
+            if (authUser?.user_metadata?.avatar_url) {
+              setAvatarPreview(authUser.user_metadata.avatar_url);
+            }
+          } else {
+            // Pour les autres erreurs, afficher un message d'erreur
+            toast.error('Erreur lors du chargement du profil');
+          }
           return;
         }
 
@@ -334,18 +375,19 @@ const Profil: React.FC = () => {
 
   return (
     <div>
-      <div className="py-8 w-full max-w-6xl mx-auto px-4">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="py-4 w-full max-w-6xl mx-auto px-4">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Carte de profil principale */}
           <div className="lg:col-span-1">
             <Card className="shadow-soft animate-fade-in">
-              <CardHeader className="text-center pb-6">
-                <div className="relative mx-auto mb-4">
+                      <CardHeader className="text-center pb-4">
+          <div className="relative mx-auto mb-2">
                   {avatarPreview ? (
                     <img
                       src={avatarPreview}
                       alt="Avatar"
-                      className="w-32 h-32 rounded-full object-cover border-4 border-green-200 shadow-lg"
+                      className="w-32 h-32 rounded-full object-cover object-center border-4 border-green-200 shadow-lg"
+                      style={{ objectPosition: 'center top' }}
                     />
                   ) : (
                     <div className="w-32 h-32 rounded-full bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center border-4 border-green-200 shadow-lg">

@@ -12,7 +12,7 @@ const ClientsAjouter: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
 
   return (
-    <div className="py-8 w-full">
+    <div className="py-4 w-full">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-4">
             <Link to="/clients/liste">

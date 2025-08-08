@@ -104,13 +104,7 @@ const UnifiedHeader: React.FC<UnifiedHeaderProps> = ({
           <div className="hidden lg:flex items-center space-x-6">
             <NavigationMenu>
               <NavigationMenuList className="flex gap-4">
-                <NavigationMenuItem>
-                  <Link to="/">
-                    <NavigationMenuLink className={`${navigationMenuTriggerStyle()} ${isDark ? 'text-white hover:text-green-300' : 'text-black font-bold hover:text-green-700'} transition-colors`}>
-                      Accueil
-                    </NavigationMenuLink>
-                  </Link>
-                </NavigationMenuItem>
+               
                 <NavigationMenuItem>
                   <Link to="/dashboard">
                     <NavigationMenuLink className={`${navigationMenuTriggerStyle()} ${isDark ? 'text-white hover:text-green-300' : 'text-black font-bold hover:text-green-700'} transition-colors`}>

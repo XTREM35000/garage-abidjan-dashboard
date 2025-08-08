@@ -23,28 +23,23 @@ import {
   Search,
   Filter,
   UserPlus,
-  Camera
+  Camera,
+  Crown,
+  Shield
 } from 'lucide-react';
 import { useSimpleAuth } from '@/hooks/useSimpleAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { FileService } from '@/integrations/supabase/fileService';
+import { User, UserProfile } from '@/types/users';
 
-interface PersonnelMember {
-  id: string;
-  full_name?: string;
-  email?: string;
-  phone?: string;
-  role?: string;
-  speciality?: string;
-  hire_date?: string;
-  organization_name?: string;
-  avatar_url?: string;
-  auth_user_id?: string;
+interface PersonnelMember extends User {
+  // Interface étendue pour la compatibilité
 }
 
 const Personnel: React.FC = () => {
   const { user: authUser, isAuthenticated } = useSimpleAuth();
   const [personnel, setPersonnel] = useState<PersonnelMember[]>([]);
+  const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -88,12 +83,36 @@ const Personnel: React.FC = () => {
   // Vérifier si l'utilisateur est admin
   const isAdmin = authUser?.user_metadata?.role === 'admin' || authUser?.user_metadata?.role === 'super_admin' || authUser?.user_metadata?.role === 'proprietaire';
 
-  // Charger la liste du personnel
+  // Charger la liste du personnel et l'utilisateur connecté
   useEffect(() => {
-    if (isAuthenticated && isAdmin) {
-      fetchPersonnel();
+    if (isAuthenticated) {
+      fetchCurrentUser();
+      if (isAdmin) {
+        fetchPersonnel();
+      }
     }
   }, [isAuthenticated, isAdmin]);
+
+  const fetchCurrentUser = async () => {
+    try {
+      if (!authUser) return;
+
+      const { data: userData, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('auth_user_id', authUser.id)
+        .single();
+
+      if (error) {
+        console.error('Erreur lors de la récupération de l\'utilisateur:', error);
+        return;
+      }
+
+      setCurrentUser(userData);
+    } catch (error) {
+      console.error('Erreur lors du chargement de l\'utilisateur:', error);
+    }
+  };
 
   const fetchPersonnel = async () => {
     try {
@@ -289,17 +308,6 @@ const Personnel: React.FC = () => {
     }
   };
 
-  // Filtrage du personnel
-  const filteredPersonnel = personnel.filter(member => {
-    const matchesSearch = !searchTerm || 
-      member.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      member.email?.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesRole = filterRole === 'all' || member.role === filterRole;
-    
-    return matchesSearch && matchesRole;
-  });
-
   if (!isAuthenticated) {
     return (
       <div className="py-8 w-full max-w-6xl mx-auto px-4">
@@ -310,19 +318,27 @@ const Personnel: React.FC = () => {
     );
   }
 
-  if (!isAdmin) {
-    return (
-      <div className="py-8 w-full max-w-6xl mx-auto px-4">
-        <Alert>
-          <AlertDescription>Vous n'avez pas les permissions nécessaires pour accéder à cette page.</AlertDescription>
-        </Alert>
-      </div>
-    );
-  }
+  // Combiner l'utilisateur connecté avec le personnel pour l'affichage
+  const allPersonnel = currentUser 
+    ? [currentUser as PersonnelMember, ...personnel.filter(p => p.id !== currentUser.id)]
+    : personnel;
+
+  // Filtrage du personnel
+  const filteredPersonnel = allPersonnel.filter(member => {
+    const matchesSearch = !searchTerm || 
+      member.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      member.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      member.nom?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      member.prenom?.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesRole = filterRole === 'all' || member.role === filterRole;
+    
+    return matchesSearch && matchesRole;
+  });
 
   return (
-    <div className="py-8 w-full max-w-7xl mx-auto px-4">
-      <div className="space-y-6">
+    <div className="py-4 w-full max-w-7xl mx-auto px-4">
+      <div className="space-y-4">
         {/* En-tête */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
@@ -411,23 +427,10 @@ const Personnel: React.FC = () => {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="hire_date">Date d'embauche</Label>
-                    <Input
-                      id="hire_date"
-                      name="hire_date"
-                      type="date"
-                      value={formData.hire_date}
-                      onChange={handleInputChange}
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
                     <Label htmlFor="role">Rôle *</Label>
                     <Select value={formData.role} onValueChange={(value) => handleSelectChange('role', value)}>
                       <SelectTrigger>
-                        <SelectValue placeholder="Sélectionnez un rôle" />
+                        <SelectValue placeholder="Sélectionner un rôle" />
                       </SelectTrigger>
                       <SelectContent>
                         {roles.map(role => (
@@ -438,11 +441,14 @@ const Personnel: React.FC = () => {
                       </SelectContent>
                     </Select>
                   </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="speciality">Spécialité</Label>
                     <Select value={formData.speciality} onValueChange={(value) => handleSelectChange('speciality', value)}>
                       <SelectTrigger>
-                        <SelectValue placeholder="Sélectionnez une spécialité" />
+                        <SelectValue placeholder="Sélectionner une spécialité" />
                       </SelectTrigger>
                       <SelectContent>
                         {specialities.map(speciality => (
@@ -452,6 +458,16 @@ const Personnel: React.FC = () => {
                         ))}
                       </SelectContent>
                     </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="hire_date">Date d'embauche</Label>
+                    <Input
+                      id="hire_date"
+                      name="hire_date"
+                      type="date"
+                      value={formData.hire_date}
+                      onChange={handleInputChange}
+                    />
                   </div>
                 </div>
 
@@ -466,13 +482,20 @@ const Personnel: React.FC = () => {
                   />
                 </div>
 
+                {/* Boutons d'action */}
                 <div className="flex justify-end space-x-2 pt-4">
                   <Button variant="outline" onClick={() => setIsModalOpen(false)}>
                     Annuler
                   </Button>
                   <Button onClick={handleSave} disabled={saving}>
-                    {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    {editingMember ? 'Mettre à jour' : 'Ajouter'}
+                    {saving ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Sauvegarde...
+                      </>
+                    ) : (
+                      'Sauvegarder'
+                    )}
                   </Button>
                 </div>
               </div>
@@ -548,83 +571,95 @@ const Personnel: React.FC = () => {
                       </TableCell>
                     </TableRow>
                   ) : (
-                    filteredPersonnel.map((member) => (
-                      <TableRow key={member.id}>
-                        <TableCell>
-                          <div className="flex items-center space-x-3">
-                            {member.avatar_url ? (
-                              <img
-                                src={member.avatar_url}
-                                alt={member.full_name || 'Avatar'}
-                                className="h-10 w-10 rounded-full object-cover"
-                              />
-                            ) : (
-                              <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center">
-                                <span className="text-sm font-medium text-gray-600">
-                                  {member.full_name?.split(' ').map(n => n[0]).join('').toUpperCase() || 'U'}
-                                </span>
+                    filteredPersonnel.map((member) => {
+                      const isCurrentUser = member.id === currentUser?.id;
+                      const displayName = member.full_name || `${member.nom || ''} ${member.prenom || ''}`.trim() || 'Sans nom';
+                      
+                      return (
+                        <TableRow key={member.id} className={isCurrentUser ? 'bg-blue-50 dark:bg-blue-900/20' : ''}>
+                          <TableCell>
+                            <div className="flex items-center space-x-3">
+                              {member.avatar_url ? (
+                                <img
+                                  src={member.avatar_url}
+                                  alt={displayName}
+                                  className="h-10 w-10 rounded-full object-cover"
+                                />
+                              ) : (
+                                <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center">
+                                  <span className="text-sm font-medium text-gray-600">
+                                    {displayName.split(' ').map(n => n[0]).join('').toUpperCase() || 'U'}
+                                  </span>
+                                </div>
+                              )}
+                              <div className="flex items-center gap-2">
+                                <div>
+                                  <p className="font-medium flex items-center gap-2">
+                                    {displayName}
+                                    {isCurrentUser && (
+                                      <Crown className="h-4 w-4 text-yellow-500" />
+                                    )}
+                                  </p>
+                                  <p className="text-sm text-gray-500">{member.organization_name}</p>
+                                </div>
                               </div>
-                            )}
-                            <div>
-                              <p className="font-medium">{member.full_name || 'Sans nom'}</p>
-                              <p className="text-sm text-gray-500">{member.organization_name}</p>
                             </div>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="space-y-1">
-                            {member.email && (
-                              <div className="flex items-center text-sm">
-                                <Mail className="h-4 w-4 mr-2 text-gray-400" />
-                                {member.email}
-                              </div>
-                            )}
-                            {member.phone && (
-                              <div className="flex items-center text-sm">
-                                <Phone className="h-4 w-4 mr-2 text-gray-400" />
-                                {member.phone}
-                              </div>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge className={getRoleColor(member.role || '')}>
-                            {getRoleLabel(member.role || '')}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center text-sm">
-                            <GraduationCap className="h-4 w-4 mr-2 text-gray-400" />
-                            {member.speciality ? getSpecialityLabel(member.speciality) : 'Non définie'}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center text-sm">
-                            <Calendar className="h-4 w-4 mr-2 text-gray-400" />
-                            {member.hire_date ? new Date(member.hire_date).toLocaleDateString('fr-FR') : 'Non définie'}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center space-x-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleEdit(member)}
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleDelete(member)}
-                              className="text-red-600 hover:text-red-800"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))
+                          </TableCell>
+                          <TableCell>
+                            <div className="space-y-1">
+                              {member.email && (
+                                <div className="flex items-center text-sm">
+                                  <Mail className="h-4 w-4 mr-2 text-gray-400" />
+                                  {member.email}
+                                </div>
+                              )}
+                              {member.phone && (
+                                <div className="flex items-center text-sm">
+                                  <Phone className="h-4 w-4 mr-2 text-gray-400" />
+                                  {member.phone}
+                                </div>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Badge className={getRoleColor(member.role || '')}>
+                              {getRoleLabel(member.role || '')}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center text-sm">
+                              <GraduationCap className="h-4 w-4 mr-2 text-gray-400" />
+                              {member.speciality ? getSpecialityLabel(member.speciality) : 'Non définie'}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center text-sm">
+                              <Calendar className="h-4 w-4 mr-2 text-gray-400" />
+                              {member.hire_date ? new Date(member.hire_date).toLocaleDateString('fr-FR') : 'Non définie'}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center space-x-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleEdit(member)}
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleDelete(member)}
+                                className="text-red-600 hover:text-red-800"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })
                   )}
                 </TableBody>
               </Table>

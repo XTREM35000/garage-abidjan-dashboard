@@ -7,7 +7,7 @@ const Dashboard: React.FC = () => {
   const { isDark } = useTheme();
 
   return (
-    <div className="py-8 w-full">
+    <div className="py-4 w-full">
       {/* Main content */}
         <img
           src="https://images.unsplash.com/photo-1563720223185-11003d516935?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80"

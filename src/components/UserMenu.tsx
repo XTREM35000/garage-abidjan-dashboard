@@ -372,18 +372,23 @@ const UserMenu: React.FC = () => {
       <div className="hidden md:block">
         <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="ghost" className="relative h-10 w-10 rounded-full">
+          <Button variant="ghost" className="relative h-10 w-10 rounded-full p-0 overflow-hidden">
             {getUserAvatar() ? (
               <img
                 src={getUserAvatar()}
                 alt={getUserName()}
-                className="h-10 w-10 rounded-full object-cover"
+                className="h-full w-full rounded-full object-cover"
+                onError={(e) => {
+                  // Fallback en cas d'erreur de chargement de l'image
+                  const target = e.target as HTMLImageElement;
+                  target.style.display = 'none';
+                  target.nextElementSibling?.classList.remove('hidden');
+                }}
               />
-            ) : (
-              <div className="h-10 w-10 rounded-full bg-gradient-to-br from-green-500 to-green-700 flex items-center justify-center">
-                <span className="text-white text-sm font-medium">{getInitials()}</span>
-              </div>
-            )}
+            ) : null}
+            <div className={`h-full w-full rounded-full bg-gradient-to-br from-green-500 to-green-700 flex items-center justify-center ${getUserAvatar() ? 'hidden' : ''}`}>
+              <span className="text-white text-sm font-medium">{getInitials()}</span>
+            </div>
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent className="w-56" align="end" forceMount>

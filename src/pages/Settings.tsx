@@ -215,7 +215,7 @@ const Settings: React.FC = () => {
 
   return (
     <div>
-      <div className="py-8 w-full">
+      <div className="py-4 w-full">
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className={`text-3xl font-bold mb-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>

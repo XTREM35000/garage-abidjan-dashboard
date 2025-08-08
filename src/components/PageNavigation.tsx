@@ -25,21 +25,75 @@ const PageNavigation: React.FC<PageNavigationProps> = ({
   const getPageTitle = () => {
     if (title) return title;
 
+    // Debug: afficher le chemin actuel
+    console.log('PageNavigation - Current path:', location.pathname);
+
     const pathMap: { [key: string]: string } = {
       '/dashboard': 'Tableau de bord',
+      '/clients': 'Gestion des clients',
       '/clients/liste': 'Liste des clients',
       '/clients/ajouter': 'Ajouter un client',
       '/clients/historique': 'Historique des clients',
       '/vehicules': 'Gestion des véhicules',
       '/reparations': 'Réparations',
       '/stock': 'Gestion du stock',
+      '/personnel': 'Gestion du personnel',
       '/profil': 'Mon profil',
       '/settings': 'Paramètres',
       '/a-propos': 'À propos',
-      '/aide': 'Aide'
+      '/aide': 'Aide',
+      '/debug': 'Debug',
+      '/auth': 'Authentification',
+      '/setup': 'Configuration'
     };
 
-    return pathMap[location.pathname] || 'Page';
+    // Essayer de trouver une correspondance exacte d'abord
+    if (pathMap[location.pathname]) {
+      return pathMap[location.pathname];
+    }
+
+    // Si pas de correspondance exacte, essayer de faire correspondre par segment
+    const segments = location.pathname.split('/').filter(Boolean);
+    if (segments.length > 0) {
+      const firstSegment = segments[0];
+      const segmentMap: { [key: string]: string } = {
+        'clients': 'Gestion des clients',
+        'vehicules': 'Gestion des véhicules',
+        'reparations': 'Réparations',
+        'stock': 'Gestion du stock',
+        'personnel': 'Gestion du personnel',
+        'profil': 'Mon profil',
+        'settings': 'Paramètres',
+        'aide': 'Aide',
+        'debug': 'Debug'
+      };
+      
+      if (segmentMap[firstSegment]) {
+        return segmentMap[firstSegment];
+      }
+    }
+
+    // Fallback : capitaliser le premier segment du chemin
+    const fallbackSegments = location.pathname.split('/').filter(Boolean);
+    if (fallbackSegments.length > 0) {
+      const firstSegment = fallbackSegments[0];
+      // Améliorer l'affichage pour certains segments
+      const improvedTitles: { [key: string]: string } = {
+        'clients': 'Gestion des clients',
+        'vehicules': 'Gestion des véhicules',
+        'reparations': 'Réparations',
+        'stock': 'Gestion du stock',
+        'personnel': 'Gestion du personnel',
+        'profil': 'Mon profil',
+        'settings': 'Paramètres',
+        'aide': 'Aide',
+        'debug': 'Debug'
+      };
+      
+      return improvedTitles[firstSegment] || firstSegment.charAt(0).toUpperCase() + firstSegment.slice(1);
+    }
+
+    return 'Page';
   };
 
   const handleBack = () => {

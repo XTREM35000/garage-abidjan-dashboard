@@ -325,7 +325,7 @@ const ClientsListe: React.FC = () => {
 
   return (
     <div>
-      <div className="py-8 w-full">
+      <div className="py-4 w-full">
         <img
           src="https://images.unsplash.com/photo-1503736334956-4c8f8e92946d?auto=format&fit=crop&w=900&q=80"
           alt="Clients garage"

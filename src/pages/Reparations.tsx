@@ -258,7 +258,7 @@ const Reparations: React.FC = () => {
 
   return (
     <div>
-      <div className="py-8 w-full">
+      <div className="py-4 w-full">
         <img
           src="https://images.unsplash.com/photo-1502877338535-766e1452684a?auto=format&fit=crop&w=900&q=80"
           alt="Réparations garage"

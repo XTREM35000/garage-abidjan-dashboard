@@ -3,7 +3,7 @@ import React from 'react';
 // ... keep existing code (all other imports and data)
 
 const ClientsHistorique: React.FC = () => (
-  <div className="py-8 w-full max-w-2xl mx-auto">
+  <div className="py-4 w-full max-w-2xl mx-auto">
     <div className="text-center">
       <h1 className="text-3xl font-bold mb-4">Historique des clients</h1>
       <p className="text-muted-foreground">
