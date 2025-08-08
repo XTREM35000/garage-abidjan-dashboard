@@ -200,39 +200,34 @@ const Profil: React.FC = () => {
         }
       }
 
-      // Mise à jour du profil dans Supabase - seulement les champs essentiels
+      // Mise à jour du profil dans Supabase - seulement les champs existants
       const updateData: Record<string, any> = {};
       
       // Extraire nom et prénom du full_name
       const [nom, ...prenomParts] = formData.full_name.split(' ');
       const prenom = prenomParts.join(' ');
       
-      if (nom !== userProfile?.nom || prenom !== userProfile?.prenom) {
-        updateData.nom = nom;
-        updateData.prenom = prenom;
+      if (formData.full_name.trim() !== `${userProfile?.nom || ''} ${userProfile?.prenom || ''}`.trim()) {
+        updateData.full_name = formData.full_name;
       }
       if (formData.phone !== userProfile?.telephone) {
-        updateData.telephone = formData.phone;
+        updateData.phone = formData.phone;
       }
       if (formData.role !== userProfile?.role) {
         updateData.role = formData.role;
       }
-      if (formData.speciality !== userProfile?.specialite) {
-        updateData.specialite = formData.speciality;
+
+      // Seulement mettre à jour si on a des changements
+      if (Object.keys(updateData).length === 0) {
+        toast.success('Aucune modification détectée');
+        setIsEditing(false);
+        return;
       }
-      if (formData.date_prise_fonction !== userProfile?.date_prise_fonction) {
-        updateData.date_prise_fonction = formData.date_prise_fonction;
-      }
-      if (formData.organization_name !== userProfile?.fonction) {
-        updateData.fonction = formData.organization_name;
-      }
-      // Note: avatar_url n'existe pas dans la table users
-      // L'avatar sera géré via les métadonnées utilisateur uniquement
 
       const { error } = await supabase
         .from('users')
         .update(updateData)
-        .eq('id', authUser.id);
+        .eq('auth_user_id', authUser.id);
 
       if (error) {
         console.error('Erreur lors de la mise à jour:', error);
