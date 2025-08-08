@@ -13,7 +13,7 @@ const UnifiedLayout: React.FC<UnifiedLayoutProps> = ({ children }) => {
     <div className="min-h-screen flex flex-col bg-background text-foreground transition-all duration-300">
       {/* Header avec effet de transparence */}
       <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-lg border-b border-border/50">
-        <UnifiedHeader showUserMenu={true} showThemeToggle={true} currentOrganisationId={""} />
+        <UnifiedHeader showUserMenu={true} showThemeToggle={true} />
       </header>
       
       {/* Navigation avec animations */}

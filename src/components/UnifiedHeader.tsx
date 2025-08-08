@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Car, Wrench, Zap, Sun, Moon, Bell } from 'lucide-react';
+import { Car, Wrench, Zap, Sun, Moon, Bell, Menu, X } from 'lucide-react';
 import { useTheme } from '@/contexts/ThemeContext';
 import UserMenu from './UserMenu';
 import NotificationCenter from './NotificationCenter';
@@ -18,6 +18,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Badge } from '@/components/ui/badge';
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Button } from "@/components/ui/button";
 
 interface UnifiedHeaderProps {
   showUserMenu?: boolean;
@@ -32,6 +34,7 @@ const UnifiedHeader: React.FC<UnifiedHeaderProps> = ({
   const [garageData, setGarageData] = useState<any>({});
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [unreadNotifications, setUnreadNotifications] = useState(0);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     const stored = localStorage.getItem('garageData');
@@ -49,6 +52,14 @@ const UnifiedHeader: React.FC<UnifiedHeaderProps> = ({
       setUnreadNotifications(unreadCount);
     }
   }, [isNotificationOpen]); // Recharger quand le modal se ferme
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth >= 1024) setIsMobileMenuOpen(false);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   return (
     <header className={`w-full shadow-2xl animate-fade-in sticky top-0 z-40 transition-colors duration-500 ${
@@ -155,6 +166,70 @@ const UnifiedHeader: React.FC<UnifiedHeaderProps> = ({
                 </NavigationMenuItem>
               </NavigationMenuList>
             </NavigationMenu>
+          </div>
+
+          {/* Menu mobile */}
+          <div className="lg:hidden flex items-center">
+            <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
+              <SheetTrigger asChild>
+                <Button
+                  variant="ghost"
+                  className="p-2 text-white hover:bg-white/10"
+                  onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                >
+                  {isMobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="top" className="pt-16 bg-opacity-95 backdrop-blur-md">
+                <div className="flex flex-col space-y-4">
+                  <Link 
+                    to="/dashboard" 
+                    className="text-lg font-medium px-4 py-2 rounded-md hover:bg-white/10 transition-colors"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    Tableau de bord
+                  </Link>
+                  <div className="flex flex-col space-y-2 px-4">
+                    <span className="text-lg font-medium">Clients</span>
+                    <Link 
+                      to="/clients/liste" 
+                      className="pl-4 py-2 rounded-md hover:bg-white/10 transition-colors"
+                      onClick={() => setIsMobileMenuOpen(false)}
+                    >
+                      Liste des clients
+                    </Link>
+                    <Link 
+                      to="/clients/ajouter" 
+                      className="pl-4 py-2 rounded-md hover:bg-white/10 transition-colors"
+                      onClick={() => setIsMobileMenuOpen(false)}
+                    >
+                      Ajouter un client
+                    </Link>
+                  </div>
+                  <Link 
+                    to="/vehicules" 
+                    className="text-lg font-medium px-4 py-2 rounded-md hover:bg-white/10 transition-colors"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    Véhicules
+                  </Link>
+                  <Link 
+                    to="/reparations" 
+                    className="text-lg font-medium px-4 py-2 rounded-md hover:bg-white/10 transition-colors"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    Réparations
+                  </Link>
+                  <Link 
+                    to="/stock" 
+                    className="text-lg font-medium px-4 py-2 rounded-md hover:bg-white/10 transition-colors"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    Stock
+                  </Link>
+                </div>
+              </SheetContent>
+            </Sheet>
           </div>
 
           {/* Contrôles */}
