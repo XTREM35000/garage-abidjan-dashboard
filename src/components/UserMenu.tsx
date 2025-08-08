@@ -9,7 +9,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { User, Settings, LogOut, Shield, Database, RefreshCw, Trash2, Download, Upload, Users } from 'lucide-react';
+import { User, Settings, LogOut, Shield, Database, RefreshCw, Trash2, Download, Upload, Users, Menu } from 'lucide-react';
 import { useTheme } from '@/contexts/ThemeContext';
 import { DemoService } from '@/integrations/supabase/demoService';
 import { supabase } from '@/integrations/supabase/client';
@@ -95,7 +95,7 @@ const UserMenu: React.FC = () => {
     fetchUserData();
   }, [authUser]);
 
-  // Fonction pour obtenir l'avatar utilisateur
+    // Fonction pour obtenir l'avatar utilisateur
   const getUserAvatar = () => {
     console.log('🔍 Debug UserMenu - getUserAvatar called');
     console.log('🔍 Debug UserMenu - userProfile:', userProfile);
@@ -196,8 +196,8 @@ const UserMenu: React.FC = () => {
       await signOut();
       
       // 2. Nettoyage localStorage
-      localStorage.removeItem('auth');
-      localStorage.removeItem('garageData');
+    localStorage.removeItem('auth');
+    localStorage.removeItem('garageData');
       localStorage.removeItem('userProfile');
       localStorage.removeItem('demoUserData');
       localStorage.removeItem('selectedOrganisationSlug');
@@ -272,8 +272,105 @@ const UserMenu: React.FC = () => {
 
   return (
     <div className="flex items-center space-x-3">
-      {/* Avatar et menu utilisateur */}
-      <DropdownMenu>
+      {/* Menu mobile hamburger */}
+      <div className="md:hidden">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="sm" className="h-9 w-9 p-0">
+              <Menu className="h-5 w-5" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent className="w-64" align="end" forceMount>
+            <DropdownMenuLabel className="font-normal">
+              <div className="flex flex-col space-y-1">
+                <p className="text-sm font-medium leading-none">{getUserName()}</p>
+                <p className="text-xs leading-none text-muted-foreground">
+                  {authUser?.email}
+                </p>
+                <p className="text-xs leading-none text-muted-foreground">
+                  {getUserRole()}
+                  {getUserOrganization() && ` • ${getUserOrganization()}`}
+                </p>
+              </div>
+            </DropdownMenuLabel>
+            <DropdownMenuSeparator />
+
+            {/* Menu principal mobile */}
+            <DropdownMenuItem asChild>
+              <Link to="/profil" className="flex items-center">
+                <User className="mr-2 h-4 w-4" />
+                <span>Mon Profil</span>
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link to="/settings" className="flex items-center">
+                <Settings className="mr-2 h-4 w-4" />
+                <span>Paramètres</span>
+              </Link>
+            </DropdownMenuItem>
+
+            <DropdownMenuSeparator />
+
+            {/* Sous-menu Admin mobile */}
+            <DropdownMenuLabel className="text-xs font-medium text-muted-foreground">
+              ADMIN
+            </DropdownMenuLabel>
+            <DropdownMenuItem asChild>
+              <Link to="/dashboard" className="flex items-center">
+                <Shield className="mr-2 h-4 w-4" />
+                <span>Tableau de bord</span>
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link to="/clients" className="flex items-center">
+                <Database className="mr-2 h-4 w-4" />
+                <span>Gestion clients</span>
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link to="/personnel" className="flex items-center">
+                <Users className="mr-2 h-4 w-4" />
+                <span>Gestion du personnel</span>
+              </Link>
+            </DropdownMenuItem>
+            {(getUserRole() === 'admin' || getUserRole() === 'super_admin' || getUserRole() === 'Admin') && (
+              <DropdownMenuItem asChild>
+                <Link to="/personnel" className="flex items-center">
+                  <Users className="mr-2 h-4 w-4" />
+                  <span>Personnel</span>
+                </Link>
+              </DropdownMenuItem>
+            )}
+            <DropdownMenuItem onClick={handleInjectDemoData}>
+              <Download className="mr-2 h-4 w-4" />
+              <span>Injecter données démo</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={handleClearDemoData}>
+              <Upload className="mr-2 h-4 w-4" />
+              <span>Supprimer données démo</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={handleResetDemo}>
+              <RefreshCw className="mr-2 h-4 w-4" />
+              <span>Réinitialiser localStorage</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={handleClearData} className="text-red-600">
+              <Trash2 className="mr-2 h-4 w-4" />
+              <span>Supprimer toutes les données</span>
+            </DropdownMenuItem>
+
+            <DropdownMenuSeparator />
+
+            <DropdownMenuItem onClick={handleLogout}>
+              <LogOut className="mr-2 h-4 w-4" />
+              <span>Se déconnecter</span>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+
+      {/* Avatar et menu utilisateur desktop */}
+      <div className="hidden md:block">
+        <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button variant="ghost" className="relative h-10 w-10 rounded-full">
             {getUserAvatar() ? (
@@ -344,9 +441,9 @@ const UserMenu: React.FC = () => {
           </DropdownMenuItem>
           {(getUserRole() === 'admin' || getUserRole() === 'super_admin' || getUserRole() === 'Admin') && (
             <DropdownMenuItem asChild>
-              <Link to="/personnes" className="flex items-center">
+              <Link to="/personnel" className="flex items-center">
                 <Users className="mr-2 h-4 w-4" />
-                <span>Personnes</span>
+                <span>Personnel</span>
               </Link>
             </DropdownMenuItem>
           )}
@@ -375,8 +472,9 @@ const UserMenu: React.FC = () => {
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
-    </div>
-  );
-};
+        </div>
+      </div>
+    );
+  };
 
-export default UserMenu;
+  export default UserMenu;
