@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,6 +7,8 @@ import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { toast } from 'sonner';
 import {
   Settings as SettingsIcon,
   User,
@@ -18,21 +20,38 @@ import {
   AlertTriangle,
   Save,
   RefreshCw,
-  Camera
+  Camera,
+  Loader2
 } from 'lucide-react';
 import { useTheme } from '@/contexts/ThemeContext';
 import AdvancedSettings from '@/components/AdvancedSettings';
 import { useBrainSetup } from '@/hooks/useBrainSetup';
-import { getGarageConfig } from '@/lib/config';
+import { useSimpleAuth } from '@/hooks/useSimpleAuth';
+import { supabase } from '@/integrations/supabase/client';
+
+interface UserSettings {
+  id: string;
+  user_id: string;
+  notifications_email: boolean;
+  notifications_push: boolean;
+  notifications_sms: boolean;
+  theme: 'light' | 'dark';
+  language: string;
+  currency: string;
+  two_factor: boolean;
+  session_timeout: number;
+  photo_evidence_enabled: boolean;
+  min_photos: number;
+  max_file_size: number;
+}
 
 const Settings: React.FC = () => {
   const { isDark, toggleTheme } = useTheme();
   const { resetToFirstLaunch } = useBrainSetup();
+  const { user: authUser, isAuthenticated } = useSimpleAuth();
   const [loading, setLoading] = useState(false);
-
-  // Récupérer la configuration actuelle
-  const garageConfig = getGarageConfig();
-  const userData = JSON.parse(localStorage.getItem('user') || '{}');
+  const [saving, setSaving] = useState(false);
+  const [userSettings, setUserSettings] = useState<UserSettings | null>(null);
 
   const [settings, setSettings] = useState({
     notifications: {
@@ -48,17 +67,98 @@ const Settings: React.FC = () => {
     security: {
       twoFactor: false,
       sessionTimeout: 30
+    },
+    photoEvidence: {
+      enabled: true,
+      minPhotos: 2,
+      maxFileSize: 5
     }
   });
 
-  const handleSaveSettings = async () => {
-    setLoading(true);
-    try {
-      // Simulation de sauvegarde
-      await new Promise(resolve => setTimeout(resolve, 1500));
+  // Charger les paramètres utilisateur depuis Supabase
+  useEffect(() => {
+    const fetchUserSettings = async () => {
+      if (!authUser) return;
 
-      // Sauvegarder les paramètres
-      localStorage.setItem('settings', JSON.stringify(settings));
+      try {
+        setLoading(true);
+        
+        // Récupérer les paramètres depuis la table user_settings
+        const { data: settingsData, error } = await supabase
+          .from('user_settings')
+          .select('*')
+          .eq('user_id', authUser.id)
+          .single();
+
+        if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
+          console.error('Erreur lors de la récupération des paramètres:', error);
+          return;
+        }
+
+        if (settingsData) {
+          setUserSettings(settingsData);
+          setSettings({
+            notifications: {
+              email: settingsData.notifications_email || true,
+              push: settingsData.notifications_push || true,
+              sms: settingsData.notifications_sms || false
+            },
+            display: {
+              theme: settingsData.theme || (isDark ? 'dark' : 'light'),
+              language: settingsData.language || 'fr',
+              currency: settingsData.currency || 'XOF'
+            },
+            security: {
+              twoFactor: settingsData.two_factor || false,
+              sessionTimeout: settingsData.session_timeout || 30
+            },
+            photoEvidence: {
+              enabled: settingsData.photo_evidence_enabled || true,
+              minPhotos: settingsData.min_photos || 2,
+              maxFileSize: settingsData.max_file_size || 5
+            }
+          });
+        }
+      } catch (error) {
+        console.error('Erreur lors du chargement des paramètres:', error);
+        toast.error('Erreur lors du chargement des paramètres');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUserSettings();
+  }, [authUser, isDark]);
+
+  const handleSaveSettings = async () => {
+    if (!authUser) return;
+
+    try {
+      setSaving(true);
+
+      // Créer ou mettre à jour les paramètres dans Supabase
+      const { error } = await supabase
+        .from('user_settings')
+        .upsert({
+          user_id: authUser.id,
+          notifications_email: settings.notifications.email,
+          notifications_push: settings.notifications.push,
+          notifications_sms: settings.notifications.sms,
+          theme: settings.display.theme,
+          language: settings.display.language,
+          currency: settings.display.currency,
+          two_factor: settings.security.twoFactor,
+          session_timeout: settings.security.sessionTimeout,
+          photo_evidence_enabled: settings.photoEvidence.enabled,
+          min_photos: settings.photoEvidence.minPhotos,
+          max_file_size: settings.photoEvidence.maxFileSize
+        });
+
+      if (error) {
+        console.error('Erreur lors de la sauvegarde:', error);
+        toast.error('Erreur lors de la sauvegarde');
+        return;
+      }
 
       // Appliquer le thème
       if (settings.display.theme === 'dark' && !isDark) {
@@ -67,16 +167,51 @@ const Settings: React.FC = () => {
         toggleTheme();
       }
 
+      toast.success('Paramètres sauvegardés avec succès');
     } catch (error) {
       console.error('Erreur lors de la sauvegarde:', error);
+      toast.error('Erreur lors de la sauvegarde');
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   };
 
   const handleDeleteAll = () => {
     resetToFirstLaunch();
   };
+
+  if (!isAuthenticated) {
+    return (
+      <div className="py-8 w-full max-w-4xl mx-auto">
+        <Card className="shadow-soft animate-fade-in">
+          <CardHeader>
+            <CardTitle>Paramètres</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Alert>
+              <AlertDescription>Vous devez être connecté pour accéder à cette page.</AlertDescription>
+            </Alert>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (loading) {
+    return (
+      <div className="py-8 w-full max-w-4xl mx-auto">
+        <Card className="shadow-soft animate-fade-in">
+          <CardHeader>
+            <CardTitle>Paramètres</CardTitle>
+          </CardHeader>
+          <CardContent className="flex items-center justify-center py-8">
+            <Loader2 className="h-8 w-8 animate-spin" />
+            <span className="ml-2">Chargement des paramètres...</span>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -92,12 +227,12 @@ const Settings: React.FC = () => {
           </div>
           <Button
             onClick={handleSaveSettings}
-            disabled={loading}
+            disabled={saving}
             className="bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700"
           >
-            {loading ? (
+            {saving ? (
               <>
-                <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 Sauvegarde...
               </>
             ) : (
@@ -119,117 +254,6 @@ const Settings: React.FC = () => {
 
           {/* Onglet Général */}
           <TabsContent value="general" className="space-y-6">
-            {/* Informations du garage */}
-            <Card className={isDark ? 'bg-gray-800 border-gray-700' : ''}>
-              <CardHeader>
-                <CardTitle className={`flex items-center space-x-2 ${isDark ? 'text-white' : ''}`}>
-                  <Building2 className="w-5 h-5" />
-                  <span>Informations du Garage</span>
-                </CardTitle>
-                <CardDescription className={isDark ? 'text-gray-300' : ''}>
-                  Modifiez les informations de votre garage
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="garageName" className={isDark ? 'text-gray-300' : ''}>
-                      Nom du garage
-                    </Label>
-                    <Input
-                      id="garageName"
-                      defaultValue={garageConfig.garageName || ''}
-                      className={isDark ? 'bg-gray-700 border-gray-600' : ''}
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="ownerName" className={isDark ? 'text-gray-300' : ''}>
-                      Propriétaire
-                    </Label>
-                    <Input
-                      id="ownerName"
-                      defaultValue={garageConfig.ownerName || ''}
-                      className={isDark ? 'bg-gray-700 border-gray-600' : ''}
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="address" className={isDark ? 'text-gray-300' : ''}>
-                      Adresse
-                    </Label>
-                    <Input
-                      id="address"
-                      defaultValue={garageConfig.address || ''}
-                      className={isDark ? 'bg-gray-700 border-gray-600' : ''}
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="phone" className={isDark ? 'text-gray-300' : ''}>
-                      Téléphone
-                    </Label>
-                    <Input
-                      id="phone"
-                      defaultValue={garageConfig.phone || ''}
-                      className={isDark ? 'bg-gray-700 border-gray-600' : ''}
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="email" className={isDark ? 'text-gray-300' : ''}>
-                      Email
-                    </Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      defaultValue={garageConfig.email || ''}
-                      className={isDark ? 'bg-gray-700 border-gray-600' : ''}
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="rccm" className={isDark ? 'text-gray-300' : ''}>
-                      RCCM
-                    </Label>
-                    <Input
-                      id="rccm"
-                      defaultValue={garageConfig.rccm || ''}
-                      className={isDark ? 'bg-gray-700 border-gray-600' : ''}
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="taxRegime" className={isDark ? 'text-gray-300' : ''}>
-                      Régime Fiscal
-                    </Label>
-                    <select
-                      id="taxRegime"
-                      defaultValue={garageConfig.taxRegime || 'reel'}
-                      className={`w-full px-3 py-2 border rounded-md ${isDark ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'}`}
-                    >
-                      <option value="reel">Régime Réel</option>
-                      <option value="simplifie">Régime Simplifié</option>
-                    </select>
-                  </div>
-                  <div>
-                    <Label htmlFor="taxId" className={isDark ? 'text-gray-300' : ''}>
-                      Numéro Fiscal
-                    </Label>
-                    <Input
-                      id="taxId"
-                      defaultValue={garageConfig.taxId || ''}
-                      className={isDark ? 'bg-gray-700 border-gray-600' : ''}
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="cni" className={isDark ? 'text-gray-300' : ''}>
-                      CNI
-                    </Label>
-                    <Input
-                      id="cni"
-                      defaultValue={garageConfig.cni || ''}
-                      className={isDark ? 'bg-gray-700 border-gray-600' : ''}
-                    />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
             {/* Informations utilisateur */}
             <Card className={isDark ? 'bg-gray-800 border-gray-700' : ''}>
               <CardHeader>
@@ -249,8 +273,9 @@ const Settings: React.FC = () => {
                     </Label>
                     <Input
                       id="userName"
-                      defaultValue={userData.name || ''}
+                      defaultValue={authUser?.user_metadata?.full_name || ''}
                       className={isDark ? 'bg-gray-700 border-gray-600' : ''}
+                      disabled
                     />
                   </div>
                   <div>
@@ -260,8 +285,9 @@ const Settings: React.FC = () => {
                     <Input
                       id="userEmail"
                       type="email"
-                      defaultValue={userData.email || ''}
+                      defaultValue={authUser?.email || ''}
                       className={isDark ? 'bg-gray-700 border-gray-600' : ''}
+                      disabled
                     />
                   </div>
                 </div>
@@ -298,7 +324,11 @@ const Settings: React.FC = () => {
                     </Label>
                     <select
                       id="language"
-                      defaultValue="fr"
+                      value={settings.display.language}
+                      onChange={(e) => setSettings(prev => ({
+                        ...prev,
+                        display: { ...prev.display, language: e.target.value }
+                      }))}
                       className={`w-full p-2 rounded-md border ${isDark ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'}`}
                     >
                       <option value="fr">Français</option>
@@ -312,7 +342,11 @@ const Settings: React.FC = () => {
                     </Label>
                     <select
                       id="currency"
-                      defaultValue="XOF"
+                      value={settings.display.currency}
+                      onChange={(e) => setSettings(prev => ({
+                        ...prev,
+                        display: { ...prev.display, currency: e.target.value }
+                      }))}
                       className={`w-full p-2 rounded-md border ${isDark ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'}`}
                     >
                       <option value="XOF">XOF (FCFA)</option>
@@ -342,8 +376,11 @@ const Settings: React.FC = () => {
                     <p className="text-sm text-gray-500">Documentation obligatoire pour certaines réparations</p>
                   </div>
                   <Switch
-                    checked={true}
-                    onCheckedChange={() => {}}
+                    checked={settings.photoEvidence.enabled}
+                    onCheckedChange={(checked) => setSettings(prev => ({
+                      ...prev,
+                      photoEvidence: { ...prev.photoEvidence, enabled: checked }
+                    }))}
                   />
                 </div>
 
@@ -357,7 +394,11 @@ const Settings: React.FC = () => {
                       type="number"
                       min="1"
                       max="5"
-                      defaultValue="2"
+                      value={settings.photoEvidence.minPhotos}
+                      onChange={(e) => setSettings(prev => ({
+                        ...prev,
+                        photoEvidence: { ...prev.photoEvidence, minPhotos: parseInt(e.target.value) }
+                      }))}
                       className={isDark ? 'bg-gray-700 border-gray-600' : ''}
                     />
                   </div>
@@ -370,7 +411,11 @@ const Settings: React.FC = () => {
                       type="number"
                       min="1"
                       max="10"
-                      defaultValue="5"
+                      value={settings.photoEvidence.maxFileSize}
+                      onChange={(e) => setSettings(prev => ({
+                        ...prev,
+                        photoEvidence: { ...prev.photoEvidence, maxFileSize: parseInt(e.target.value) }
+                      }))}
                       className={isDark ? 'bg-gray-700 border-gray-600' : ''}
                     />
                   </div>
@@ -494,14 +539,14 @@ const Settings: React.FC = () => {
                       type="number"
                       min="5"
                       max="480"
-                      defaultValue={settings.security.sessionTimeout}
-                      className={isDark ? 'bg-gray-700 border-gray-600' : ''}
+                      value={settings.security.sessionTimeout}
                       onChange={(e) =>
                         setSettings(prev => ({
                           ...prev,
                           security: { ...prev.security, sessionTimeout: parseInt(e.target.value) }
                         }))
                       }
+                      className={isDark ? 'bg-gray-700 border-gray-600' : ''}
                     />
                     <p className="text-sm text-gray-500 mt-1">
                       Durée d'inactivité avant déconnexion automatique

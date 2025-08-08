@@ -6,6 +6,8 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { toast } from 'sonner';
 import {
   User,
   Mail,
@@ -23,46 +25,53 @@ import {
   Camera,
   Shield,
   Clock,
-  Star
+  Star,
+  Loader2
 } from 'lucide-react';
+import { useSimpleAuth } from '@/hooks/useSimpleAuth';
+import { supabase } from '@/integrations/supabase/client';
+import { FileService } from '@/integrations/supabase/fileService';
+
+interface UserProfile {
+  id: string;
+  full_name?: string;
+  role?: string;
+  email?: string;
+  phone?: string;
+  speciality?: string;
+  hire_date?: string;
+  organization_name?: string;
+}
 
 const Profil: React.FC = () => {
-  const [user, setUser] = useState<any>(null);
+  const { user: authUser, isAuthenticated } = useSimpleAuth();
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   const [formData, setFormData] = useState({
-    nom: '',
-    prenom: '',
+    full_name: '',
     email: '',
-    telephone: '',
+    phone: '',
     role: '',
-    fonction: '',
-    specialite: '',
-    datePriseFonction: '',
-    superior: '',
-    garageName: '',
-    adresse: '',
-    ville: '',
-    pays: ''
+    speciality: '',
+    hire_date: '',
+    organization_name: ''
   });
 
   const roles = [
-    { value: 'proprietaire', label: 'Propriétaire', color: 'bg-purple-100 text-purple-800' },
-    { value: 'directeur', label: 'Directeur', color: 'bg-blue-100 text-blue-800' },
-    { value: 'chef-garagiste', label: 'Chef Garagiste', color: 'bg-green-100 text-green-800' },
-    { value: 'technicien', label: 'Technicien', color: 'bg-orange-100 text-orange-800' },
-    { value: 'mecanicien', label: 'Mécanicien', color: 'bg-red-100 text-red-800' },
-    { value: 'electricien', label: 'Électricien', color: 'bg-yellow-100 text-yellow-800' },
-    { value: 'comptable', label: 'Comptable', color: 'bg-indigo-100 text-indigo-800' },
-    { value: 'secretaire', label: 'Secrétaire', color: 'bg-pink-100 text-pink-800' },
-    { value: 'receptionniste', label: 'Réceptionniste', color: 'bg-teal-100 text-teal-800' },
-    { value: 'vendeur', label: 'Vendeur', color: 'bg-cyan-100 text-cyan-800' }
+    { value: 'mecanicien', label: 'Mécanicien' },
+    { value: 'gerant_restaurant', label: 'Gérant Restaurant' },
+    { value: 'gerant_boutique', label: 'Gérant Boutique' },
+    { value: 'electricien', label: 'Électricien' },
+    { value: 'admin', label: 'Admin' },
+    { value: 'super_admin', label: 'Super Admin' }
   ];
 
-  const specialites = [
+  const specialities = [
     { value: 'mecanique-generale', label: 'Mécanique Générale' },
     { value: 'mecanique-moteur', label: 'Mécanique Moteur' },
     { value: 'electricite-automobile', label: 'Électricité Automobile' },
@@ -79,31 +88,53 @@ const Profil: React.FC = () => {
     { value: 'gestion', label: 'Gestion' }
   ];
 
+  // Charger les données utilisateur depuis Supabase
   useEffect(() => {
-    const userData = localStorage.getItem('user');
-    if (userData) {
-      const parsedUser = JSON.parse(userData);
-      setUser(parsedUser);
-      setFormData({
-        nom: parsedUser.nom || '',
-        prenom: parsedUser.prenom || '',
-        email: parsedUser.email || '',
-        telephone: parsedUser.telephone || '',
-        role: parsedUser.role || '',
-        fonction: parsedUser.fonction || '',
-        specialite: parsedUser.specialite || '',
-        datePriseFonction: parsedUser.datePriseFonction || '',
-        superior: parsedUser.superior || '',
-        garageName: parsedUser.garageName || '',
-        adresse: parsedUser.adresse || '',
-        ville: parsedUser.ville || '',
-        pays: parsedUser.pays || ''
-      });
-      if (parsedUser.avatar) {
-        setAvatarPreview(parsedUser.avatar);
+    const fetchUserProfile = async () => {
+      if (!authUser) return;
+
+      try {
+        setLoading(true);
+        
+        // Récupérer le profil depuis la table users
+        const { data: profileData, error } = await supabase
+          .from('users')
+          .select('*')
+          .eq('auth_user_id', authUser.id)
+          .single();
+
+        if (error) {
+          console.error('Erreur lors de la récupération du profil:', error);
+          return;
+        }
+
+        if (profileData) {
+          setUserProfile(profileData);
+          setFormData({
+            full_name: profileData.full_name || '',
+            email: profileData.email || authUser.email || '',
+            phone: profileData.phone || '',
+            role: profileData.role || '',
+            speciality: profileData.speciality || '',
+            hire_date: profileData.hire_date || '',
+            organization_name: profileData.organization_name || ''
+          });
+          
+          // L'avatar sera récupéré depuis les métadonnées utilisateur
+          if (authUser?.user_metadata?.avatar_url) {
+            setAvatarPreview(authUser.user_metadata.avatar_url);
+          }
+        }
+      } catch (error) {
+        console.error('Erreur lors du chargement du profil:', error);
+        toast.error('Erreur lors du chargement du profil');
+      } finally {
+        setLoading(false);
       }
-    }
-  }, []);
+    };
+
+    fetchUserProfile();
+  }, [authUser]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
@@ -122,6 +153,11 @@ const Profil: React.FC = () => {
   const handleAvatarChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
+      if (file.size > 2 * 1024 * 1024) {
+        toast.error('L\'image est trop volumineuse (max 2Mo)');
+        return;
+      }
+      
       setAvatarFile(file);
       const reader = new FileReader();
       reader.onload = (e) => {
@@ -133,53 +169,116 @@ const Profil: React.FC = () => {
   };
 
   const handleSave = async () => {
-    setLoading(true);
+    if (!authUser) return;
+
     try {
-      // Simulation de sauvegarde
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      setSaving(true);
 
-      const updatedUser = {
-        ...user,
-        ...formData,
-        avatar: avatarPreview
-      };
+      let avatarUrl = authUser?.user_metadata?.avatar_url;
 
-      setUser(updatedUser);
-      localStorage.setItem('user', JSON.stringify(updatedUser));
+      // Upload de l'avatar si un nouveau fichier est sélectionné
+      if (avatarFile) {
+        const uploadResult = await FileService.uploadUserAvatar(
+          avatarFile, 
+          authUser.id, 
+          (progress) => {
+            console.log('Upload progress:', progress);
+            // Optionnel : afficher la progression à l'utilisateur
+          }
+        );
+        if (uploadResult.success) {
+          avatarUrl = uploadResult.url;
+          toast.success('Avatar mis à jour avec succès');
+        } else {
+          toast.error('Erreur lors de l\'upload de l\'avatar: ' + uploadResult.error);
+          return;
+        }
+      }
+
+      // Mise à jour du profil dans Supabase - seulement les champs essentiels
+      const updateData: Record<string, any> = {};
+      
+      if (formData.full_name !== userProfile?.full_name) {
+        updateData.full_name = formData.full_name;
+      }
+      if (formData.phone !== userProfile?.phone) {
+        updateData.phone = formData.phone;
+      }
+      if (formData.role !== userProfile?.role) {
+        updateData.role = formData.role;
+      }
+      if (formData.speciality !== userProfile?.speciality) {
+        updateData.speciality = formData.speciality;
+      }
+      if (formData.hire_date !== userProfile?.hire_date) {
+        updateData.hire_date = formData.hire_date;
+      }
+      // Note: avatar_url n'existe pas dans la table users
+      // L'avatar sera géré via les métadonnées utilisateur uniquement
+
+      const { error } = await supabase
+        .from('users')
+        .update(updateData)
+        .eq('auth_user_id', authUser.id);
+
+      if (error) {
+        console.error('Erreur lors de la mise à jour:', error);
+        toast.error('Erreur lors de la sauvegarde');
+        return;
+      }
+
+      // Mise à jour des métadonnées utilisateur
+      await supabase.auth.updateUser({
+        data: {
+          full_name: formData.full_name,
+          avatar_url: avatarUrl
+        }
+      });
+
+      // Recharger les données
+      const { data: updatedProfile } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', authUser.id)
+        .single();
+
+      if (updatedProfile) {
+        setUserProfile(updatedProfile);
+      }
+
       setIsEditing(false);
+      setAvatarFile(null);
+      toast.success('Profil mis à jour avec succès');
     } catch (error) {
       console.error('Erreur lors de la sauvegarde:', error);
+      toast.error('Erreur lors de la sauvegarde');
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   };
 
   const handleCancel = () => {
     setIsEditing(false);
+    setAvatarFile(null);
+    
     // Restaurer les données originales
-    if (user) {
-      setFormData({
-        nom: user.nom || '',
-        prenom: user.prenom || '',
-        email: user.email || '',
-        telephone: user.telephone || '',
-        role: user.role || '',
-        fonction: user.fonction || '',
-        specialite: user.specialite || '',
-        datePriseFonction: user.datePriseFonction || '',
-        superior: user.superior || '',
-        garageName: user.garageName || '',
-        adresse: user.adresse || '',
-        ville: user.ville || '',
-        pays: user.pays || ''
-      });
-      setAvatarPreview(user.avatar);
+    if (userProfile) {
+              setFormData({
+          full_name: userProfile.full_name || '',
+          email: userProfile.email || authUser?.email || '',
+          phone: userProfile.phone || '',
+          role: userProfile.role || '',
+          speciality: userProfile.speciality || '',
+          hire_date: userProfile.hire_date || '',
+          organization_name: userProfile.organization_name || ''
+        });
+      setAvatarPreview(authUser?.user_metadata?.avatar_url || null);
     }
   };
 
   const getRoleColor = (roleValue: string) => {
     const role = roles.find(r => r.value === roleValue);
-    return role ? role.color : 'bg-gray-100 text-gray-800';
+    return role ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800';
   };
 
   const getRoleLabel = (roleValue: string) => {
@@ -187,12 +286,12 @@ const Profil: React.FC = () => {
     return role ? role.label : roleValue;
   };
 
-  const getSpecialiteLabel = (specialiteValue: string) => {
-    const specialite = specialites.find(s => s.value === specialiteValue);
-    return specialite ? specialite.label : specialiteValue;
+  const getSpecialityLabel = (specialityValue: string) => {
+    const speciality = specialities.find(s => s.value === specialityValue);
+    return speciality ? speciality.label : specialityValue;
   };
 
-  if (!user) {
+  if (!isAuthenticated) {
     return (
       <div className="py-8 w-full max-w-4xl mx-auto">
         <Card className="shadow-soft animate-fade-in">
@@ -200,7 +299,25 @@ const Profil: React.FC = () => {
             <CardTitle>Profil</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-muted-foreground">Aucun utilisateur connecté.</p>
+            <Alert>
+              <AlertDescription>Vous devez être connecté pour accéder à cette page.</AlertDescription>
+            </Alert>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (loading) {
+    return (
+      <div className="py-8 w-full max-w-4xl mx-auto">
+        <Card className="shadow-soft animate-fade-in">
+          <CardHeader>
+            <CardTitle>Profil</CardTitle>
+          </CardHeader>
+          <CardContent className="flex items-center justify-center py-8">
+            <Loader2 className="h-8 w-8 animate-spin" />
+            <span className="ml-2">Chargement du profil...</span>
           </CardContent>
         </Card>
       </div>
@@ -246,30 +363,30 @@ const Profil: React.FC = () => {
                   )}
                 </div>
                 <CardTitle className="text-2xl font-bold">
-                  {user.nom} {user.prenom}
+                  {userProfile?.full_name || authUser?.email || 'Utilisateur'}
                 </CardTitle>
                 <div className="flex justify-center mb-2">
-                  <Badge className={getRoleColor(user.role)}>
-                    {getRoleLabel(user.role)}
+                  <Badge className={getRoleColor(userProfile?.role || '')}>
+                    {getRoleLabel(userProfile?.role || '')}
                   </Badge>
                 </div>
-                <p className="text-muted-foreground">{user.fonction}</p>
+                <p className="text-muted-foreground">{userProfile?.speciality ? getSpecialityLabel(userProfile.speciality) : 'Spécialité non définie'}</p>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex items-center space-x-3">
                   <Mail className="w-5 h-5 text-gray-400" />
-                  <span className="text-sm">{user.email}</span>
+                  <span className="text-sm">{userProfile?.email || authUser?.email}</span>
                 </div>
-                {user.telephone && (
+                {userProfile?.phone && (
                   <div className="flex items-center space-x-3">
                     <Phone className="w-5 h-5 text-gray-400" />
-                    <span className="text-sm">{user.telephone}</span>
+                    <span className="text-sm">{userProfile.phone}</span>
                   </div>
                 )}
-                {user.garageName && (
+                {userProfile?.organization_name && (
                   <div className="flex items-center space-x-3">
                     <Building className="w-5 h-5 text-gray-400" />
-                    <span className="text-sm">{user.garageName}</span>
+                    <span className="text-sm">{userProfile.organization_name}</span>
                   </div>
                 )}
                 <div className="flex justify-center pt-4">
@@ -277,15 +394,25 @@ const Profil: React.FC = () => {
                     <div className="flex space-x-2">
                       <Button
                         onClick={handleSave}
-                        disabled={loading}
+                        disabled={saving}
                         className="bg-green-600 hover:bg-green-700"
                       >
-                        {loading ? 'Sauvegarde...' : <><Save className="w-4 h-4 mr-2" />Sauvegarder</>}
+                        {saving ? (
+                          <>
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            Sauvegarde...
+                          </>
+                        ) : (
+                          <>
+                            <Save className="w-4 h-4 mr-2" />
+                            Sauvegarder
+                          </>
+                        )}
                       </Button>
                       <Button
                         variant="outline"
                         onClick={handleCancel}
-                        disabled={loading}
+                        disabled={saving}
                       >
                         <X className="w-4 h-4 mr-2" />Annuler
                       </Button>
@@ -316,33 +443,18 @@ const Profil: React.FC = () => {
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label className="text-sm font-medium">Nom</Label>
+                    <Label className="text-sm font-medium">Nom complet</Label>
                     {isEditing ? (
                       <Input
-                        name="nom"
-                        value={formData.nom}
+                        name="full_name"
+                        value={formData.full_name}
                         onChange={handleInputChange}
                         className="h-10"
                       />
                     ) : (
-                      <p className="text-sm text-muted-foreground">{user.nom || 'Non renseigné'}</p>
+                      <p className="text-sm text-muted-foreground">{userProfile?.full_name || 'Non renseigné'}</p>
                     )}
                   </div>
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium">Prénom</Label>
-                    {isEditing ? (
-                      <Input
-                        name="prenom"
-                        value={formData.prenom}
-                        onChange={handleInputChange}
-                        className="h-10"
-                      />
-                    ) : (
-                      <p className="text-sm text-muted-foreground">{user.prenom || 'Non renseigné'}</p>
-                    )}
-                  </div>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label className="text-sm font-medium">Email</Label>
                     {isEditing ? (
@@ -354,21 +466,21 @@ const Profil: React.FC = () => {
                         className="h-10"
                       />
                     ) : (
-                      <p className="text-sm text-muted-foreground">{user.email}</p>
+                      <p className="text-sm text-muted-foreground">{userProfile?.email || authUser?.email}</p>
                     )}
                   </div>
                   <div className="space-y-2">
                     <Label className="text-sm font-medium">Téléphone</Label>
                     {isEditing ? (
                       <Input
-                        name="telephone"
+                        name="phone"
                         type="tel"
-                        value={formData.telephone}
+                        value={formData.phone}
                         onChange={handleInputChange}
                         className="h-10"
                       />
                     ) : (
-                      <p className="text-sm text-muted-foreground">{user.telephone || 'Non renseigné'}</p>
+                      <p className="text-sm text-muted-foreground">{userProfile?.phone || 'Non renseigné'}</p>
                     )}
                   </div>
                 </div>
@@ -400,43 +512,31 @@ const Profil: React.FC = () => {
                       </Select>
                     ) : (
                       <div className="flex items-center space-x-2">
-                        <Badge className={getRoleColor(user.role)}>
-                          {getRoleLabel(user.role)}
+                        <Badge className={getRoleColor(userProfile?.role || '')}>
+                          {getRoleLabel(userProfile?.role || '')}
                         </Badge>
                       </div>
                     )}
                   </div>
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium">Fonction</Label>
-                    {isEditing ? (
-                      <Input
-                        name="fonction"
-                        value={formData.fonction}
-                        onChange={handleInputChange}
-                        className="h-10"
-                      />
-                    ) : (
-                      <p className="text-sm text-muted-foreground">{user.fonction || 'Non renseigné'}</p>
-                    )}
-                  </div>
+
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label className="text-sm font-medium">Domaine de spécialité</Label>
                     {isEditing ? (
-                      <Select value={formData.specialite} onValueChange={(value) => handleSelectChange('specialite', value)}>
+                      <Select value={formData.speciality} onValueChange={(value) => handleSelectChange('speciality', value)}>
                         <SelectTrigger className="h-10">
                           <SelectValue placeholder="Sélectionnez votre spécialité" />
                         </SelectTrigger>
                         <SelectContent>
-                          {specialites.map(specialite => (
-                            <SelectItem key={specialite.value} value={specialite.value}>{specialite.label}</SelectItem>
+                          {specialities.map(speciality => (
+                            <SelectItem key={speciality.value} value={speciality.value}>{speciality.label}</SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
                     ) : (
                       <p className="text-sm text-muted-foreground">
-                        {user.specialite ? getSpecialiteLabel(user.specialite) : 'Non renseigné'}
+                        {userProfile?.speciality ? getSpecialityLabel(userProfile.speciality) : 'Non renseigné'}
                       </p>
                     )}
                   </div>
@@ -444,102 +544,50 @@ const Profil: React.FC = () => {
                     <Label className="text-sm font-medium">Date de prise de fonction</Label>
                     {isEditing ? (
                       <Input
-                        name="datePriseFonction"
+                        name="hire_date"
                         type="date"
-                        value={formData.datePriseFonction}
+                        value={formData.hire_date}
                         onChange={handleInputChange}
                         className="h-10"
                       />
                     ) : (
                       <p className="text-sm text-muted-foreground">
-                        {user.datePriseFonction ? new Date(user.datePriseFonction).toLocaleDateString('fr-FR') : 'Non renseigné'}
+                        {userProfile?.hire_date ? new Date(userProfile.hire_date).toLocaleDateString('fr-FR') : 'Non renseigné'}
                       </p>
                     )}
                   </div>
                 </div>
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium">Supérieur hiérarchique</Label>
-                  {isEditing ? (
-                    <Input
-                      name="superior"
-                      value={formData.superior}
-                      onChange={handleInputChange}
-                      className="h-10"
-                    />
-                  ) : (
-                    <p className="text-sm text-muted-foreground">{user.superior || 'Non renseigné'}</p>
-                  )}
-                </div>
+
               </CardContent>
             </Card>
 
-            {/* Informations du garage */}
+            {/* Informations de l'organisation */}
             <Card className="shadow-soft animate-fade-in">
               <CardHeader>
                 <CardTitle className="flex items-center space-x-2">
                   <Building className="w-5 h-5" />
-                  <span>Informations du garage</span>
+                  <span>Informations de l'organisation</span>
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
-                  <Label className="text-sm font-medium">Nom du garage</Label>
+                  <Label className="text-sm font-medium">Nom de l'organisation</Label>
                   {isEditing ? (
                     <Input
-                      name="garageName"
-                      value={formData.garageName}
+                      name="organization_name"
+                      value={formData.organization_name}
                       onChange={handleInputChange}
                       className="h-10"
                     />
                   ) : (
-                    <p className="text-sm text-muted-foreground">{user.garageName || 'Non renseigné'}</p>
+                    <p className="text-sm text-muted-foreground">{userProfile?.organization_name || 'Non renseigné'}</p>
                   )}
                 </div>
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium">Adresse</Label>
-                  {isEditing ? (
-                    <Input
-                      name="adresse"
-                      value={formData.adresse}
-                      onChange={handleInputChange}
-                      className="h-10"
-                    />
-                  ) : (
-                    <p className="text-sm text-muted-foreground">{user.adresse || 'Non renseigné'}</p>
-                  )}
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium">Ville</Label>
-                    {isEditing ? (
-                      <Input
-                        name="ville"
-                        value={formData.ville}
-                        onChange={handleInputChange}
-                        className="h-10"
-                      />
-                    ) : (
-                      <p className="text-sm text-muted-foreground">{user.ville || 'Non renseigné'}</p>
-                    )}
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium">Pays</Label>
-                    {isEditing ? (
-                      <Input
-                        name="pays"
-                        value={formData.pays}
-                        onChange={handleInputChange}
-                        className="h-10"
-                      />
-                    ) : (
-                      <p className="text-sm text-muted-foreground">{user.pays || 'Non renseigné'}</p>
-                    )}
-                  </div>
-                </div>
+
               </CardContent>
             </Card>
 
-            {/* Statistiques et informations supplémentaires */}
+            {/* Statistiques */}
             <Card className="shadow-soft animate-fade-in">
               <CardHeader>
                 <CardTitle className="flex items-center space-x-2">

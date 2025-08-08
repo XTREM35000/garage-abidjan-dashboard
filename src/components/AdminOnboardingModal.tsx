@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
+import { Label } from '@/components/ui/label';
 import {
   User,
   Mail,
@@ -35,13 +35,28 @@ const AdminOnboardingModal: React.FC<AdminOnboardingModalProps> = ({
     password: '',
     confirmPassword: '',
     phone: '',
-    name: ''
+    name: '',
+    slug: '', // Ajout du slug
   });
   const [verificationCode, setVerificationCode] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // Génération automatique du slug à chaque changement du nom
+  useEffect(() => {
+    if (formData.name) {
+      const prefix = formData.name.replace(/\s/g, '').substring(0, 3).toLowerCase();
+      const random = Math.floor(100 + Math.random() * 900); // 3 chiffres aléatoires
+      setFormData((prev) => ({
+        ...prev,
+        slug: `${prefix}${random}`,
+      }));
+    } else {
+      setFormData((prev) => ({ ...prev, slug: '' }));
+    }
+  }, [formData.name]);
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
@@ -259,6 +274,14 @@ const AdminOnboardingModal: React.FC<AdminOnboardingModalProps> = ({
                   {errors.confirmPassword && (
                     <p className="text-sm text-red-500">{errors.confirmPassword}</p>
                   )}
+                </div>
+
+                {/* Identifiant unique (slug) */}
+                <div className="space-y-2">
+                 <Label>Identifiant unique (slug) *</Label>
+  <div className="bg-gray-100 rounded px-3 py-2 text-gray-700 font-mono select-all border border-gray-200">
+    {formData.slug || <span className="text-gray-400">auto-généré</span>}
+  </div>
                 </div>
               </CardContent>
             </Card>

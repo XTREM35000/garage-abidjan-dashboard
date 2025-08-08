@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -39,12 +39,47 @@ const AdminCRUDModal: React.FC<AdminCRUDModalProps> = ({
     confirmPassword: '',
     phone: '',
     nom: '',
-    prenom: ''
+    prenom: '',
+    slug: '',
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // Génération automatique du slug à chaque changement du nom
+  useEffect(() => {
+    if (formData.nom) {
+      const prefix = formData.nom.replace(/\s/g, '').substring(0, 3).toLowerCase();
+      const random = Math.floor(100 + Math.random() * 900); // 3 chiffres aléatoires
+      setFormData((prev) => ({
+        ...prev,
+        slug: `${prefix}${random}`,
+      }));
+    } else {
+      setFormData((prev) => ({ ...prev, slug: '' }));
+    }
+  }, [formData.nom]);
+
+  // Vérification en temps réel de l'existence de l'organisation
+  useEffect(() => {
+    const checkOrg = async () => {
+      if (formData.nom.length > 3) {
+        const { data } = await supabase
+          .from('organisations')
+          .select('id')
+          .eq('nom', formData.nom)
+          .maybeSingle();
+
+        if (data) {
+          setErrors(prev => ({ ...prev, nom: 'Cette organisation existe déjà' }));
+        }
+      }
+    };
+
+    const timer = setTimeout(checkOrg, 500);
+    return () => clearTimeout(timer);
+  }, [formData.nom]);
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
@@ -117,7 +152,23 @@ const AdminCRUDModal: React.FC<AdminCRUDModalProps> = ({
     setIsLoading(true);
 
     try {
-      // Créer le compte utilisateur dans Supabase Auth
+      // Vérification de l'existence de l'organisation
+      const { data: existingOrg, error: orgError } = await supabase
+        .from('organisations')
+        .select('id,nom')
+        .eq('nom', formData.nom)
+        .maybeSingle();
+
+      if (orgError) throw orgError;
+
+      if (existingOrg) {
+        setErrors(prev => ({ ...prev, nom: 'Cette organisation existe déjà' }));
+        document.getElementById('organisation-nom')?.focus();
+        setIsLoading(false);
+        return;
+      }
+
+      // Suite du processus de création...
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
@@ -240,25 +291,38 @@ const AdminCRUDModal: React.FC<AdminCRUDModalProps> = ({
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="nom" className="text-blue-700 dark:text-blue-300">
+                  <Label htmlFor="organisation-nom" className="text-blue-700 dark:text-blue-300">
                     Nom *
                   </Label>
                   <div className="relative">
                     <User className="absolute left-3 top-3 h-4 w-4 text-blue-500" />
                     <Input
-                      id="nom"
+                      id="organisation-nom"
                       type="text"
                       value={formData.nom}
-                      onChange={(e) => handleInputChange('nom', e.target.value)}
+                      onChange={(e) => {
+                        handleInputChange('nom', e.target.value);
+                        setErrors(prev => ({ ...prev, nom: '' }));
+                      }}
+                      placeholder="Nom unique de l'organisation"
                       className={`pl-10 border-blue-300 dark:border-blue-600 focus:border-blue-500 dark:focus:border-blue-400 ${
                         errors.nom ? 'border-red-500' : ''
                       }`}
-                      placeholder="Votre nom"
                     />
                   </div>
                   {errors.nom && (
-                    <p className="text-red-500 text-sm">{errors.nom}</p>
+                    <p className="text-red-500 text-sm mt-1 flex items-center">
+                      <AlertCircle className="w-4 h-4 mr-1" />
+                      {errors.nom}
+                    </p>
                   )}
+                  {/* Slug auto-généré */}
+                  <div className="space-y-1 mt-2">
+                    <Label>Identifiant unique (slug) auto</Label>
+                    <div className="bg-gray-100 rounded px-3 py-2 text-gray-700 font-mono select-all border border-gray-200">
+                      {formData.slug || <span className="text-gray-400">auto-généré</span>}
+                    </div>
+                  </div>
                 </div>
               </div>
 

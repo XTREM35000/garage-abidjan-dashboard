@@ -13,7 +13,7 @@ const Header: React.FC = () => {
     try {
       await signOut();
       toast.success('Déconnexion réussie');
-      navigate('/auth-gate');
+      navigate('/auth');
     } catch (error) {
       toast.error('Erreur lors de la déconnexion');
     }

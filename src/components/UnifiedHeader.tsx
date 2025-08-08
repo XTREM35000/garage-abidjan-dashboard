@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Car, Wrench, Zap, Sun, Moon, Bell } from 'lucide-react';
 import { useTheme } from '@/contexts/ThemeContext';
-import { useSimpleAuth } from '@/hooks/useSimpleAuth';
+import UserMenu from './UserMenu';
 import NotificationCenter from './NotificationCenter';
 import { Link } from 'react-router-dom';
 import {
@@ -199,7 +199,7 @@ const UnifiedHeader: React.FC<UnifiedHeaderProps> = ({
             )}
 
             {/* Menu utilisateur */}
-            {showUserMenu && <div className="text-white text-sm">Menu</div>}
+            {showUserMenu && <UserMenu />}
           </div>
         </div>
       </div>

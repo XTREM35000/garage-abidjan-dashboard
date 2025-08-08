@@ -105,8 +105,19 @@ export class FileService {
   /**
    * Upload un avatar utilisateur
    */
-  static async uploadUserAvatar(file: File, onProgress?: (progress: number) => void): Promise<UploadResult> {
-    const userId = (await supabase.auth.getUser()).data.user?.id;
+  static async uploadUserAvatar(file: File, userId?: string, onProgress?: (progress: number) => void): Promise<UploadResult> {
+    if (!userId) {
+      const user = (await supabase.auth.getUser()).data.user;
+      userId = user?.id;
+    }
+    
+    if (!userId) {
+      return {
+        success: false,
+        error: 'Utilisateur non authentifié'
+      };
+    }
+
     return this.uploadFile({
       bucket: 'user-avatars',
       file,

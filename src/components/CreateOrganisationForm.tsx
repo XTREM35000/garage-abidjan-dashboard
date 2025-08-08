@@ -23,7 +23,15 @@ interface SlugValidation {
   suggestions: string[];
 }
 
-const CreateOrganisationForm: React.FC = () => {
+interface CreateOrganisationFormProps {
+  prefillEmail?: string;
+  onSuccess?: () => void;
+}
+
+const CreateOrganisationForm: React.FC<CreateOrganisationFormProps> = ({ 
+  prefillEmail = '', 
+  onSuccess 
+}) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [currentStep, setCurrentStep] = useState(1);
@@ -83,6 +91,40 @@ const CreateOrganisationForm: React.FC = () => {
       });
     }
   }, 500);
+
+  // Génération automatique du slug basée sur le nom
+  const generateSlug = (name: string): string => {
+    if (!name) return '';
+    
+    // Nettoyer le nom (supprimer caractères spéciaux, garder lettres et chiffres)
+    const cleanName = name.toLowerCase()
+      .replace(/[^a-z0-9\s]/g, '')
+      .replace(/\s+/g, '')
+      .trim();
+    
+    // Prendre les 3 premiers caractères
+    const prefix = cleanName.substring(0, 3);
+    
+    // Générer 3 chiffres aléatoires
+    const randomNumbers = Math.floor(Math.random() * 900) + 100; // 100-999
+    
+    return `${prefix}-${randomNumbers}`;
+  };
+
+  // Mettre à jour le slug quand le nom change
+  useEffect(() => {
+    if (formData.nom && !formData.slug) {
+      const newSlug = generateSlug(formData.nom);
+      setFormData(prev => ({ ...prev, slug: newSlug }));
+    }
+  }, [formData.nom]);
+
+  // Pré-remplir l'email si fourni
+  useEffect(() => {
+    if (prefillEmail && !formData.email) {
+      setFormData(prev => ({ ...prev, email: prefillEmail }));
+    }
+  }, [prefillEmail]);
 
   useEffect(() => {
     if (formData.slug) {
@@ -181,9 +223,13 @@ const CreateOrganisationForm: React.FC = () => {
       localStorage.setItem('selectedOrganisationSlug', formData.slug);
 
       toast.success('Organisation créée avec succès !');
-      navigate('/auth');
-    } catch (error: any) {
-      const errorMessage = error.message || 'Erreur inconnue lors de la création';
+      if (onSuccess) {
+        onSuccess();
+      } else {
+        navigate('/auth');
+      }
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Erreur inconnue lors de la création';
       setError(errorMessage);
       toast.error(errorMessage);
     } finally {

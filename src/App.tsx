@@ -15,6 +15,7 @@ import Reparations from '@/pages/Reparations';
 import Stock from '@/pages/Stock';
 import Settings from '@/pages/Settings';
 import Profil from '@/pages/Profil';
+import Personnel from '@/pages/Personnel';
 import Aide from '@/pages/Aide';
 import APropos from '@/pages/APropos';
 import NotFound from '@/pages/NotFound';
@@ -24,6 +25,8 @@ import WorkflowGuard from '@/components/WorkflowGuard';
 import SimpleAuthGuard from '@/components/SimpleAuthGuard';
 import PostAuthHandler from '@/components/PostAuthHandler';
 import ErrorBoundary from '@/components/ErrorBoundary';
+import AuthenticatedLayout from '@/layout/AuthenticatedLayout';
+import UserMenuDebug from '@/components/UserMenuDebug';
 
 // Styles
 import './App.css';
@@ -48,14 +51,16 @@ const App: React.FC = () => {
               {/* Page d'authentification */}
               <Route path="/auth" element={<Auth />} />
 
-              {/* Routes protégées avec WorkflowGuard */}
+              {/* Routes protégées avec WorkflowGuard et AuthenticatedLayout */}
               <Route
                 path="/dashboard"
                 element={
                   <WorkflowGuard>
                     <SimpleAuthGuard>
                       <PostAuthHandler>
-                        <Dashboard />
+                        <AuthenticatedLayout>
+                          <Dashboard />
+                        </AuthenticatedLayout>
                       </PostAuthHandler>
                     </SimpleAuthGuard>
                   </WorkflowGuard>
@@ -68,7 +73,9 @@ const App: React.FC = () => {
                   <WorkflowGuard>
                     <SimpleAuthGuard>
                       <PostAuthHandler>
-                        <ClientsListe />
+                        <AuthenticatedLayout>
+                          <ClientsListe />
+                        </AuthenticatedLayout>
                       </PostAuthHandler>
                     </SimpleAuthGuard>
                   </WorkflowGuard>
@@ -81,7 +88,9 @@ const App: React.FC = () => {
                   <WorkflowGuard>
                     <SimpleAuthGuard>
                       <PostAuthHandler>
-                        <ClientsAjouter />
+                        <AuthenticatedLayout>
+                          <ClientsAjouter />
+                        </AuthenticatedLayout>
                       </PostAuthHandler>
                     </SimpleAuthGuard>
                   </WorkflowGuard>
@@ -94,7 +103,24 @@ const App: React.FC = () => {
                   <WorkflowGuard>
                     <SimpleAuthGuard>
                       <PostAuthHandler>
-                        <ClientsHistorique />
+                        <AuthenticatedLayout>
+                          <ClientsHistorique />
+                        </AuthenticatedLayout>
+                      </PostAuthHandler>
+                    </SimpleAuthGuard>
+                  </WorkflowGuard>
+                }
+              />
+
+              <Route
+                path="/clients/liste"
+                element={
+                  <WorkflowGuard>
+                    <SimpleAuthGuard>
+                      <PostAuthHandler>
+                        <AuthenticatedLayout>
+                          <ClientsListe />
+                        </AuthenticatedLayout>
                       </PostAuthHandler>
                     </SimpleAuthGuard>
                   </WorkflowGuard>
@@ -107,7 +133,9 @@ const App: React.FC = () => {
                   <WorkflowGuard>
                     <SimpleAuthGuard>
                       <PostAuthHandler>
-                        <Vehicules />
+                        <AuthenticatedLayout>
+                          <Vehicules />
+                        </AuthenticatedLayout>
                       </PostAuthHandler>
                     </SimpleAuthGuard>
                   </WorkflowGuard>
@@ -120,7 +148,9 @@ const App: React.FC = () => {
                   <WorkflowGuard>
                     <SimpleAuthGuard>
                       <PostAuthHandler>
-                        <Reparations />
+                        <AuthenticatedLayout>
+                          <Reparations />
+                        </AuthenticatedLayout>
                       </PostAuthHandler>
                     </SimpleAuthGuard>
                   </WorkflowGuard>
@@ -133,7 +163,9 @@ const App: React.FC = () => {
                   <WorkflowGuard>
                     <SimpleAuthGuard>
                       <PostAuthHandler>
-                        <Stock />
+                        <AuthenticatedLayout>
+                          <Stock />
+                        </AuthenticatedLayout>
                       </PostAuthHandler>
                     </SimpleAuthGuard>
                   </WorkflowGuard>
@@ -146,7 +178,9 @@ const App: React.FC = () => {
                   <WorkflowGuard>
                     <SimpleAuthGuard>
                       <PostAuthHandler>
-                        <Settings />
+                        <AuthenticatedLayout>
+                          <Settings />
+                        </AuthenticatedLayout>
                       </PostAuthHandler>
                     </SimpleAuthGuard>
                   </WorkflowGuard>
@@ -159,7 +193,24 @@ const App: React.FC = () => {
                   <WorkflowGuard>
                     <SimpleAuthGuard>
                       <PostAuthHandler>
-                        <Profil />
+                        <AuthenticatedLayout>
+                          <Profil />
+                        </AuthenticatedLayout>
+                      </PostAuthHandler>
+                    </SimpleAuthGuard>
+                  </WorkflowGuard>
+                }
+              />
+
+              <Route
+                path="/personnel"
+                element={
+                  <WorkflowGuard>
+                    <SimpleAuthGuard>
+                      <PostAuthHandler>
+                        <AuthenticatedLayout>
+                          <Personnel />
+                        </AuthenticatedLayout>
                       </PostAuthHandler>
                     </SimpleAuthGuard>
                   </WorkflowGuard>
@@ -172,7 +223,9 @@ const App: React.FC = () => {
                   <WorkflowGuard>
                     <SimpleAuthGuard>
                       <PostAuthHandler>
-                        <Aide />
+                        <AuthenticatedLayout>
+                          <Aide />
+                        </AuthenticatedLayout>
                       </PostAuthHandler>
                     </SimpleAuthGuard>
                   </WorkflowGuard>
@@ -185,7 +238,24 @@ const App: React.FC = () => {
                   <WorkflowGuard>
                     <SimpleAuthGuard>
                       <PostAuthHandler>
-                        <APropos />
+                        <AuthenticatedLayout>
+                          <APropos />
+                        </AuthenticatedLayout>
+                      </PostAuthHandler>
+                    </SimpleAuthGuard>
+                  </WorkflowGuard>
+                }
+              />
+
+              <Route
+                path="/debug"
+                element={
+                  <WorkflowGuard>
+                    <SimpleAuthGuard>
+                      <PostAuthHandler>
+                        <AuthenticatedLayout>
+                          <UserMenuDebug />
+                        </AuthenticatedLayout>
                       </PostAuthHandler>
                     </SimpleAuthGuard>
                   </WorkflowGuard>
