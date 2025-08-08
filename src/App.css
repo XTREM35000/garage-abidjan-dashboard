@@ -69,3 +69,8 @@ html, body, #root {
 * {
   box-sizing: border-box;
 }
+
+body.menu-open {
+  overflow-y: hidden; /* bloque le scroll vertical seulement */
+  overflow-x: auto;   /* autorise le scroll horizontal */
+}

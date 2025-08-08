@@ -27,3 +27,4 @@ monfile.pub
 *.njsproj
 *.sln
 *.sw?
+.vercel

@@ -35,6 +35,7 @@ const UnifiedHeader: React.FC<UnifiedHeaderProps> = ({
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [unreadNotifications, setUnreadNotifications] = useState(0);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
   useEffect(() => {
     const stored = localStorage.getItem('garageData');
@@ -55,11 +56,21 @@ const UnifiedHeader: React.FC<UnifiedHeaderProps> = ({
 
   useEffect(() => {
     const handleResize = () => {
-      if (window.innerWidth >= 1024) setIsMobileMenuOpen(false);
+      setIsMobile(window.innerWidth < 768);
+      if (window.innerWidth >= 768) setIsMobileMenuOpen(false);
     };
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+
+  useEffect(() => {
+    if (isMobileMenuOpen) {
+      document.body.classList.add('menu-open');
+    } else {
+      document.body.classList.remove('menu-open');
+    }
+    return () => document.body.classList.remove('menu-open');
+  }, [isMobileMenuOpen]);
 
   return (
     <header className={`w-full shadow-2xl animate-fade-in sticky top-0 z-40 transition-colors duration-500 ${
@@ -180,7 +191,7 @@ const UnifiedHeader: React.FC<UnifiedHeaderProps> = ({
                   {isMobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
                 </Button>
               </SheetTrigger>
-              <SheetContent side="top" className="pt-16 bg-opacity-95 backdrop-blur-md">
+              <SheetContent side="top" className="pt-16 bg-opacity-95 backdrop-blur-md max-w-md mx-auto">
                 <div className="flex flex-col space-y-4">
                   <Link 
                     to="/dashboard" 
