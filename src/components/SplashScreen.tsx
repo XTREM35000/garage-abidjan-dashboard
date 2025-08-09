@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Car, Wrench, Zap, Building2, CheckCircle } from 'lucide-react';
+import { initializeSaaSSchema } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 interface SplashScreenProps {
   onComplete: () => void;
@@ -9,6 +11,7 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onComplete }) => {
   const [progress, setProgress] = useState(0);
   const [currentStep, setCurrentStep] = useState(0);
   const [showCheckmark, setShowCheckmark] = useState(false);
+  const [initError, setInitError] = useState<string | null>(null);
 
   const steps = [
     { name: 'Initialisation', icon: Building2, color: 'from-blue-500 to-blue-600' },
@@ -19,35 +22,77 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onComplete }) => {
   ];
 
   useEffect(() => {
-    const timer = setInterval(() => {
-      setProgress(prev => {
-        if (prev >= 100) {
+    const initApp = async () => {
+      try {
+        // Initialisation du schéma SaaS
+        const { success, error } = await initializeSaaSSchema();
+
+        if (!success) {
+          setInitError(error);
+          toast.error("Erreur d'initialisation : " + error);
+          return;
+        }
+
+        // Démarrage des animations de progression
+        const timer = setInterval(() => {
+          setProgress(prev => {
+            if (prev >= 100) {
+              clearInterval(timer);
+              setShowCheckmark(true);
+              setTimeout(() => {
+                onComplete();
+              }, 1500);
+              return 100;
+            }
+            return prev + 1.5;
+          });
+        }, 80);
+
+        const stepTimer = setInterval(() => {
+          setCurrentStep(prev => {
+            if (prev >= steps.length - 1) {
+              clearInterval(stepTimer);
+              return steps.length - 1;
+            }
+            return prev + 1;
+          });
+        }, 1200);
+
+        return () => {
           clearInterval(timer);
-          setShowCheckmark(true);
-          setTimeout(() => {
-            onComplete();
-          }, 1500); // Réduit à 1.5 secondes
-          return 100;
-        }
-        return prev + 1.5; // Accéléré de 1 à 1.5
-      });
-    }, 80); // Accéléré de 100ms à 80ms
-
-    const stepTimer = setInterval(() => {
-      setCurrentStep(prev => {
-        if (prev >= steps.length - 1) {
           clearInterval(stepTimer);
-          return steps.length - 1;
-        }
-        return prev + 1;
-      });
-    }, 1200); // Accéléré de 1500ms à 1200ms
-
-    return () => {
-      clearInterval(timer);
-      clearInterval(stepTimer);
+        };
+      } catch (error) {
+        console.error('Erreur lors de l\'initialisation:', error);
+        setInitError(error instanceof Error ? error.message : 'Erreur inconnue');
+        toast.error("Erreur critique d'initialisation");
+      }
     };
-  }, [onComplete, steps.length]);
+
+    initApp();
+  }, [onComplete]);
+
+  // Affichage de l'erreur si nécessaire
+  if (initError) {
+    return (
+      <div className="fixed inset-0 bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center z-50">
+        <div className="text-center space-y-4">
+          <div className="text-red-500 text-xl font-bold">
+            Erreur d'initialisation
+          </div>
+          <div className="text-gray-300">
+            {initError}
+          </div>
+          <button
+            onClick={() => window.location.reload()}
+            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition"
+          >
+            Réessayer
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="fixed inset-0 bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center z-50">
@@ -137,26 +182,23 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onComplete }) => {
               return (
                 <div
                   key={index}
-                  className={`flex items-center space-x-3 transition-all duration-300 ${
-                    isActive ? 'text-white' : isCompleted ? 'text-green-400' : 'text-gray-500'
-                  }`}
+                  className={`flex items-center space-x-3 transition-all duration-300 ${isActive ? 'text-white' : isCompleted ? 'text-green-400' : 'text-gray-500'
+                    }`}
                 >
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300 ${
-                    isActive
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300 ${isActive
                       ? `bg-gradient-to-r ${step.color}`
                       : isCompleted
                         ? 'bg-green-500'
                         : 'bg-gray-600'
-                  }`}>
+                    }`}>
                     {isCompleted ? (
                       <CheckCircle className="w-4 h-4 text-white" />
                     ) : (
                       <StepIcon className="w-4 h-4 text-white" />
                     )}
                   </div>
-                  <span className={`text-sm transition-all duration-300 ${
-                    isActive ? 'font-medium' : ''
-                  }`}>
+                  <span className={`text-sm transition-all duration-300 ${isActive ? 'font-medium' : ''
+                    }`}>
                     {step.name}
                   </span>
                   {isActive && (

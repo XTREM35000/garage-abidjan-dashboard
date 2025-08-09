@@ -8,7 +8,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
   User, Mail, Phone, Shield, AlertCircle, Eye, EyeOff, Crown, Lock, Sparkles
 } from 'lucide-react';
-import { supabase, signUpWithEmail } from '@/integrations/supabase/client';
+import { supabase, signUpWithEmail, initializeSaaSSchema } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
 interface SuperAdminSetupModalProps {
@@ -87,6 +87,7 @@ const SuperAdminSetupModal: React.FC<SuperAdminSetupModalProps> = ({ isOpen, onC
     setIsLoading(true);
 
     try {
+      // 1. Création du super admin (code existant)
       let userId: string;
 
       // 1. Créer un nouveau compte (pas de vérification admin pour éviter 403)
@@ -95,7 +96,7 @@ const SuperAdminSetupModal: React.FC<SuperAdminSetupModalProps> = ({ isOpen, onC
         phone: formData.phone,
         role: 'superadmin'
       });
-      
+
       if (!authData.user) {
         if (authData.error?.includes('already registered')) {
           // Si l'utilisateur existe déjà, on peut essayer de se connecter pour récupérer l'ID
@@ -145,28 +146,36 @@ const SuperAdminSetupModal: React.FC<SuperAdminSetupModalProps> = ({ isOpen, onC
         throw insertError;
       }
 
-       // 4. Créer la relation user_organizations pour le Super-Admin
-       const { data: orgs } = await supabase
-         .from('organisations')
-         .select('id')
-         .limit(1);
+      // 4. Créer la relation user_organizations pour le Super-Admin
+      const { data: orgs } = await supabase
+        .from('organisations')
+        .select('id')
+        .limit(1);
 
-       if (orgs && orgs.length > 0) {
-         const { error: userOrgError } = await supabase
-           .from('user_organizations')
-           .insert({
-             user_id: userId,
-             organization_id: orgs[0].id,
-             role: 'superadmin'
-           } as any);
+      if (orgs && orgs.length > 0) {
+        const { error: userOrgError } = await supabase
+          .from('user_organizations')
+          .insert({
+            user_id: userId,
+            organization_id: orgs[0].id,
+            role: 'superadmin'
+          } as any);
 
-         if (userOrgError) {
-           console.error('Erreur création relation user_organizations:', userOrgError);
-         }
-       }
+        if (userOrgError) {
+          console.error('Erreur création relation user_organizations:', userOrgError);
+        }
+      }
 
-       // 5. Message de succès
-       toast.success('Super-Admin créé avec succès !');
+      // 5. Initialisation du schéma SaaS
+      const { success: schemaSuccess, error: schemaError } = await initializeSaaSSchema();
+
+      if (!schemaSuccess) {
+        throw new Error(schemaError || 'Erreur lors de l\'initialisation du schéma SaaS');
+      }
+
+      // 6. Messages de succès
+      toast.success('Super-Admin créé avec succès !');
+      toast.success('Configuration SaaS initialisée');
 
       onComplete({
         user: { id: userId, email: formData.email },
@@ -178,19 +187,19 @@ const SuperAdminSetupModal: React.FC<SuperAdminSetupModalProps> = ({ isOpen, onC
           role: 'superadmin'
         }
       });
-    } catch (error: any) {
-      console.error('Erreur création Super-Admin:', error);
 
-      // Messages d'erreur plus spécifiques
-      let errorMessage = 'Erreur création Super-Admin';
-      if (error.message?.includes('Email not confirmed')) {
-        errorMessage = 'Email non confirmé. Vérifiez votre boîte mail ou contactez l\'administrateur.';
+    } catch (error: any) {
+      console.error('Erreur configuration initiale:', error);
+
+      // Messages d'erreur améliorés
+      let errorMessage = 'Erreur lors de la configuration';
+
+      if (error.message?.includes('SaaS')) {
+        errorMessage = 'Erreur lors de l\'initialisation du schéma SaaS';
+      } else if (error.message?.includes('Email not confirmed')) {
+        errorMessage = 'Email non confirmé. Vérifiez votre boîte mail.';
       } else if (error.message?.includes('User already registered')) {
         errorMessage = 'Un compte existe déjà avec cet email.';
-      } else if (error.message?.includes('Invalid email')) {
-        errorMessage = 'Format d\'email invalide.';
-      } else if (error.message?.includes('Password')) {
-        errorMessage = 'Mot de passe trop faible ou invalide.';
       }
 
       toast.error(errorMessage);
@@ -200,7 +209,7 @@ const SuperAdminSetupModal: React.FC<SuperAdminSetupModalProps> = ({ isOpen, onC
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={() => {}}>
+    <Dialog open={isOpen} onOpenChange={() => { }}>
       <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900 dark:to-green-800 border-green-200 dark:border-green-700">
         <DialogHeader className="text-center">
           <div className="mx-auto mb-4 w-16 h-16 bg-gradient-to-r from-green-500 to-emerald-600 rounded-full flex items-center justify-center animate-pulse">

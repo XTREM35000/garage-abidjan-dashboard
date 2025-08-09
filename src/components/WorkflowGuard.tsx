@@ -1,50 +1,37 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
+import { useAuth } from '@/hooks/useAuth';
+import { useOrganization } from '@/hooks/useOrganization';
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
 import SplashScreen from './SplashScreen';
 import InitializationWizard from './InitializationWizard';
 
 interface WorkflowGuardProps {
   children: React.ReactNode;
+  requireOnboarding?: boolean;
 }
 
 type WorkflowState = 'loading' | 'needs-init' | 'needs-auth' | 'ready';
 
-const WorkflowGuard: React.FC<WorkflowGuardProps> = ({ children }) => {
+export function WorkflowGuard({ requireOnboarding = true, children }: WorkflowGuardProps) {
+  const { user, isLoading: authLoading } = useAuth();
+  const { currentOrg, isLoading: orgLoading } = useOrganization();
   const [workflowState, setWorkflowState] = useState<WorkflowState>('loading');
   const [initStep, setInitStep] = useState<'super-admin' | 'pricing' | 'organization-admin'>('super-admin');
   const navigate = useNavigate();
 
   useEffect(() => {
-    checkWorkflowState();
-  }, []);
-
-  const checkWorkflowState = async () => {
-    try {
-      console.log('🔍 Vérification de l\'état du workflow...');
-
-      // 1. Vérifier si un super admin existe (PRIORITÉ ABSOLUE)
-      const { count: superAdminCount, error: superAdminError } = await supabase
+    const checkInitialSetup = async () => {
+      // Vérifier si c'est le premier lancement de l'application
+      const { count: superAdminCount } = await supabase
         .from('super_admins')
         .select('*', { count: 'exact', head: true });
 
-      if (superAdminError) {
-        console.error('❌ Erreur vérification super admin:', superAdminError);
-        // If table doesn't exist, start with super admin creation
+      if (!superAdminCount) {
         setWorkflowState('needs-init');
         setInitStep('super-admin');
         return;
       }
-
-      if (!superAdminCount || superAdminCount === 0) {
-        console.log('⚠️ Aucun super admin trouvé - PREMIER LANCEMENT');
-        setWorkflowState('needs-init');
-        setInitStep('super-admin');
-        return;
-      }
-
-      console.log('✅ Super admin trouvé');
 
       // 2. Vérifier si une organisation existe
       const { count: orgCount, error: orgError } = await supabase
@@ -148,25 +135,23 @@ const WorkflowGuard: React.FC<WorkflowGuardProps> = ({ children }) => {
       console.log('🎉 Workflow complet, application prête');
       setWorkflowState('ready');
 
-    } catch (error) {
-      console.error('❌ Erreur lors de la vérification du workflow:', error);
-      // En cas d'erreur, forcer l'initialisation
-      setWorkflowState('needs-init');
-      setInitStep('super-admin');
+    };
+
+    if (!authLoading && !orgLoading) {
+      checkInitialSetup();
     }
-  };
+  }, [authLoading, orgLoading, navigate]);
 
   const handleInitComplete = () => {
     console.log('✅ Initialisation terminée');
-    toast.success('Configuration terminée ! Vous pouvez maintenant vous connecter.');
     setWorkflowState('ready');
     // Rediriger vers auth pour que l'utilisateur se connecte
     navigate('/auth');
   };
 
   // État de chargement
-  if (workflowState === 'loading') {
-    return <SplashScreen onComplete={() => {}} />;
+  if (workflowState === 'loading' || authLoading || orgLoading) {
+    return <SplashScreen onComplete={() => { }} />;
   }
 
   // Besoin d'initialisation (PRIORITÉ ABSOLUE)
@@ -195,22 +180,18 @@ const WorkflowGuard: React.FC<WorkflowGuardProps> = ({ children }) => {
     );
   }
 
-  // Prêt - afficher le contenu
-  if (workflowState === 'ready') {
-    return <>{children}</>;
+  // Rediriger vers l'onboarding si nécessaire
+  if (requireOnboarding && !currentOrg?.setup_complete) {
+    return <Navigate to="/onboarding" replace />;
   }
 
-  // Fallback - forcer l'initialisation
-  console.log('⚠️ État inconnu, forcer l\'initialisation');
-  setWorkflowState('needs-init');
-  setInitStep('super-admin');
-  return (
-    <InitializationWizard
-      isOpen={true}
-      onComplete={handleInitComplete}
-      startStep="super-admin"
-    />
-  );
-};
+  // Rediriger vers la sélection d'organisation si aucune n'est sélectionnée
+  if (!currentOrg && user.role !== 'super_admin') {
+    return <Navigate to="/select-organization" replace />;
+  }
+
+  // Prêt - afficher le contenu
+  return <>{children}</>;
+}
 
 export default WorkflowGuard;
