@@ -80,7 +80,7 @@ const GarageSetupModal = ({ isOpen, onComplete }: GarageSetupModalProps) => {
   const prevStep = () => setStep(step - 1);
 
   return (
-    <Dialog open={isOpen} onOpenChange={() => {}}>
+    <Dialog open={isOpen} onOpenChange={() => { }}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-2xl font-bold text-center flex items-center justify-center gap-2">
@@ -95,9 +95,8 @@ const GarageSetupModal = ({ isOpen, onComplete }: GarageSetupModalProps) => {
             {[1, 2, 3].map((i) => (
               <div
                 key={i}
-                className={`w-3 h-3 rounded-full transition-all duration-300 ${
-                  i <= step ? 'bg-primary' : 'bg-muted'
-                }`}
+                className={`w-3 h-3 rounded-full transition-all duration-300 ${i <= step ? 'bg-primary' : 'bg-muted'
+                  }`}
               />
             ))}
           </div>
@@ -108,28 +107,74 @@ const GarageSetupModal = ({ isOpen, onComplete }: GarageSetupModalProps) => {
                 <User className="w-5 h-5" />
                 Informations de base
               </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="garageName">Nom du garage *</Label>
-                  <Input
-                    id="garageName"
-                    placeholder="Ex: Garage Central Auto"
-                    value={formData.name}
-                    onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                    className="mt-1"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="ownerName">Nom du propriétaire *</Label>
-                  <Input
-                    id="ownerName"
-                    placeholder="Ex: Jean Kouassi"
-                    value={formData.ownerName}
-                    onChange={(e) => setFormData(prev => ({ ...prev, ownerName: e.target.value }))}
-                    className="mt-1"
+
+              {/* Nom du garage */}
+              <div>
+                <Label htmlFor="garageName">Nom du garage *</Label>
+                <Input
+                  id="garageName"
+                  placeholder="Ex: Garage Central Auto"
+                  value={formData.name}
+                  onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                  className="mt-1"
+                />
+              </div>
+
+              {/* Logo upload */}
+              <div>
+                <Label>Logo du garage (optionnel)</Label>
+                <div
+                  className={`mt-2 border-2 border-dashed rounded-lg p-6 text-center transition-all duration-200 ${dragActive ? 'border-primary bg-primary/10' : 'border-muted'
+                    }`}
+                  onDragEnter={handleDrag}
+                  onDragLeave={handleDrag}
+                  onDragOver={handleDrag}
+                  onDrop={handleDrop}
+                >
+                  {formData.logoFile ? (
+                    <div className="space-y-2">
+                      <Check className="w-8 h-8 text-green-500 mx-auto" />
+                      <p className="text-sm text-muted-foreground">
+                        {formData.logoFile.name}
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <Upload className="w-8 h-8 text-muted-foreground mx-auto" />
+                      <p className="text-sm text-muted-foreground">
+                        Glissez votre logo ici ou
+                      </p>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => document.getElementById('logoInput')?.click()}
+                      >
+                        Choisir un fichier
+                      </Button>
+                    </div>
+                  )}
+                  <input
+                    id="logoInput"
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => handleFileUpload(e.target.files)}
                   />
                 </div>
               </div>
+
+              {/* Nom du propriétaire */}
+              <div>
+                <Label htmlFor="ownerName">Nom du propriétaire *</Label>
+                <Input
+                  id="ownerName"
+                  placeholder="Ex: Jean Kouassi"
+                  value={formData.ownerName}
+                  onChange={(e) => setFormData(prev => ({ ...prev, ownerName: e.target.value }))}
+                  className="mt-1"
+                />
+              </div>
+
               <div className="flex justify-end">
                 <Button onClick={nextStep} disabled={!formData.name || !formData.ownerName}>
                   Suivant
@@ -144,14 +189,13 @@ const GarageSetupModal = ({ isOpen, onComplete }: GarageSetupModalProps) => {
                 <Camera className="w-5 h-5" />
                 Logo et Contact
               </h3>
-              
+
               {/* Logo upload */}
               <div>
                 <Label>Logo du garage (optionnel)</Label>
                 <div
-                  className={`mt-2 border-2 border-dashed rounded-lg p-6 text-center transition-all duration-200 ${
-                    dragActive ? 'border-primary bg-primary/10' : 'border-muted'
-                  }`}
+                  className={`mt-2 border-2 border-dashed rounded-lg p-6 text-center transition-all duration-200 ${dragActive ? 'border-primary bg-primary/10' : 'border-muted'
+                    }`}
                   onDragEnter={handleDrag}
                   onDragLeave={handleDrag}
                   onDragOver={handleDrag}
@@ -240,14 +284,13 @@ const GarageSetupModal = ({ isOpen, onComplete }: GarageSetupModalProps) => {
                 <Palette className="w-5 h-5" />
                 Couleur de thème
               </h3>
-              
+
               <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                 {colorOptions.map((color) => (
                   <Card
                     key={color.value}
-                    className={`cursor-pointer transition-all duration-200 hover:shadow-medium ${
-                      formData.themeColor === color.value ? 'ring-2 ring-primary' : ''
-                    }`}
+                    className={`cursor-pointer transition-all duration-200 hover:shadow-medium ${formData.themeColor === color.value ? 'ring-2 ring-primary' : ''
+                      }`}
                     onClick={() => setFormData(prev => ({ ...prev, themeColor: color.value }))}
                   >
                     <CardContent className="p-3">

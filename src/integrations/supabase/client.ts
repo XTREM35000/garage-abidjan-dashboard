@@ -228,25 +228,42 @@ export const createOrganizationWithEdge = async (orgData: any) => {
     console.log('📋 Données communes:', commonData);
     console.log('📋 Nom de l\'organisation:', orgData.name);
 
-    // Insérer avec la colonne 'name' uniquement
-    console.log('🔄 Tentative avec colonne "name"...');
-    const { data: createdOrg, error: insertError } = await supabase
+    // Utiliser la fonction SQL avec SECURITY DEFINER pour contourner les restrictions
+    console.log('🔄 Tentative avec fonction SQL create_organization...');
+    const { data: createdOrg, error: rpcError } = await supabase.rpc('create_organization_with_owner', {
+      org_name: orgData.name.trim(),
+      org_code: commonData.code,
+      org_slug: commonData.slug,
+      org_email: commonData.email,
+      org_subscription_type: commonData.subscription_type,
+      owner_user_id: (await supabase.auth.getUser()).data.user?.id
+    });
+
+    if (createdOrg && !rpcError) {
+      console.log('✅ Organisation créée avec succès via fonction SQL');
+      return { data: createdOrg, error: null };
+    }
+
+    // Si la fonction SQL échoue, essayer l'insertion directe comme fallback
+    console.log('⚠️ Fonction SQL échouée, tentative insertion directe...');
+    const { data: fallbackOrg, error: insertError } = await supabase
       .from('organisations')
       .insert({
         ...commonData,
-        name: orgData.name.trim() // Colonne name uniquement
+        name: orgData.name.trim()
       })
       .select()
       .single();
 
-    if (createdOrg && !insertError) {
-      console.log('✅ Organisation créée avec succès');
-      return { data: createdOrg, error: null };
+    if (fallbackOrg && !insertError) {
+      console.log('✅ Organisation créée avec succès via insertion directe');
+      return { data: fallbackOrg, error: null };
     }
 
-    // Si ça échoue, retourner l'erreur
-    console.error('❌ Erreur création organisation:', insertError);
-    return { data: null, error: insertError };
+    // Si tout échoue, retourner l'erreur
+    console.error('❌ Erreur création organisation (fonction SQL):', rpcError);
+    console.error('❌ Erreur création organisation (insertion directe):', insertError);
+    return { data: null, error: rpcError || insertError };
 
   } catch (error) {
     console.error('❌ Exception lors de la création d\'organisation:', error);
@@ -287,10 +304,10 @@ export const getOrganizationsWithEdge = async () => {
 export const checkUserPermissions = async (userId: string, organizationId?: string) => {
   try {
     if (!organizationId) {
-        const { data: userOrgs, error } = await supabase
-          .from('user_organizations')
-          .select(`
-            organization_id,
+      const { data: userOrgs, error } = await supabase
+        .from('user_organizations')
+        .select(`
+            organisation_id,
             organisations!inner(
               id,
               name,
@@ -298,33 +315,33 @@ export const checkUserPermissions = async (userId: string, organizationId?: stri
               description
             )
           `)
-          .eq('user_id', userId);
+        .eq('user_id', userId);
 
-        console.log('🔍 user_organizations récupérées:', userOrgs);
+      console.log('🔍 user_organizations récupérées:', userOrgs);
 
-        if (error) {
-          console.error('❌ Erreur récupération user_organizations:', error);
-          // En mode demo, retourner un tableau vide au lieu d'une erreur
-          return {
-            organizations: [],
-            hasAccess: false,
-            error: null
-          };
-        }
-
-        // Mapper les organisations avec le nom correct
-        const mappedOrgs = userOrgs?.map(userOrg => ({
-          ...userOrg,
-          organisations: userOrg.organisations ? {
-            ...userOrg.organisations,
-            nom: (userOrg.organisations as any).name // Ajouter nom pour compatibilité
-          } : null
-        })) || [];
-
+      if (error) {
+        console.error('❌ Erreur récupération user_organizations:', error);
+        // En mode demo, retourner un tableau vide au lieu d'une erreur
         return {
-          organizations: mappedOrgs,
-          hasAccess: (userOrgs?.length || 0) > 0
+          organizations: [],
+          hasAccess: false,
+          error: null
         };
+      }
+
+      // Mapper les organisations avec le nom correct
+      const mappedOrgs = userOrgs?.map(userOrg => ({
+        ...userOrg,
+        organisations: userOrg.organisations ? {
+          ...userOrg.organisations,
+          nom: (userOrg.organisations as any).name // Ajouter nom pour compatibilité
+        } : null
+      })) || [];
+
+      return {
+        organizations: mappedOrgs,
+        hasAccess: (userOrgs?.length || 0) > 0
+      };
     }
 
     const { data: userOrg, error } = await supabase
@@ -338,7 +355,7 @@ export const checkUserPermissions = async (userId: string, organizationId?: stri
         )
       `)
       .eq('user_id', userId)
-      .eq('organization_id', organizationId)
+      .eq('organisation_id', organizationId)
       .single();
 
     if (error && error.code !== 'PGRST116') {
@@ -427,7 +444,7 @@ export const getAvailableOrganizations = async () => {
       try {
         const { organizations } = await checkUserPermissions(user.id);
         console.log('🔍 Organisations retournées par checkUserPermissions:', organizations);
-        
+
         // Si l'utilisateur a des organisations via user_organizations
         if (organizations && organizations.length > 0) {
           // Mapper correctement les organisations
@@ -449,7 +466,7 @@ export const getAvailableOrganizations = async () => {
       } catch (permError) {
         console.error('❌ Erreur permissions utilisateur:', permError);
       }
-      
+
       // Mode demo : récupérer toutes les organisations si l'utilisateur n'a pas de relations
       console.log('🔄 Mode demo : utilisateur sans relations, récupération de toutes les organisations...');
       const { organizations: allOrgs, error } = await getOrganizationsWithEdge();
@@ -478,15 +495,15 @@ export const getAvailableOrganizations = async () => {
 export const testOrganizations = async () => {
   try {
     console.log('🧪 Test des organisations...');
-    
+
     // Test 1: Récupération directe des organisations
     const { data: directOrgs, error: directError } = await supabase
       .from('organisations')
       .select('*');
-    
+
     console.log('🔍 Organisations directes:', directOrgs);
     console.log('❌ Erreur directe:', directError);
-    
+
     // Test 2: Récupération via user_organizations
     const { data: { user } } = await supabase.auth.getUser();
     if (user) {
@@ -502,15 +519,15 @@ export const testOrganizations = async () => {
           )
         `)
         .eq('user_id', user.id);
-      
+
       console.log('🔍 User organizations:', userOrgs);
       console.log('❌ Erreur user organizations:', userOrgsError);
     }
-    
+
     // Test 3: Test de la fonction getAvailableOrganizations
     const result = await getAvailableOrganizations();
     console.log('🔍 Résultat getAvailableOrganizations:', result);
-    
+
     return result;
   } catch (error) {
     console.error('❌ Erreur test organisations:', error);
