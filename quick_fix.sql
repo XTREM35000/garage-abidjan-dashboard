@@ -78,3 +78,4 @@ BEGIN
     RAISE NOTICE '✅ Colonne organisation_id (avec s) utilisée';
     RAISE NOTICE '✅ Pas de référence à la colonne role inexistante';
 END $$;
+
